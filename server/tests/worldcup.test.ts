@@ -1,0 +1,22 @@
+import {buildApp} from '../app.js';
+import {readConfig} from '../config.js';
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+import {Store} from '../store.js';
+import type {Database,Sql} from '../store.js';
+import {readFile} from 'node:fs/promises';
+test('favorite badge is authenticated, idempotent, isolated per account and replaces the old showcase',async t=>{
+ const pg=new PGlite();const wrap=(db:Pick<PGlite,'query'>):Sql=>({async query<T extends Record<string,unknown>>(sql:string,values?:unknown[]){return {rows:(await db.query<T>(sql,values)).rows};}});const db:Database={...wrap(pg),transaction:fn=>pg.transaction(tx=>fn(wrap(tx as Pick<PGlite,'query'>))),close:()=>pg.close()};t.after(()=>db.close());const store=new Store(db);await store.migrate();
+ const a=await store.googleUser('favorite-a',null,'a'),b=await store.googleUser('favorite-b',null,'b');await store.session('favorite-a',a.id);await store.session('favorite-b',b.id);
+ const origin='http://localhost:5173',app=await buildApp(readConfig({APP_ORIGIN:origin,DATABASE_URL:'postgres://test',GOOGLE_CLIENT_ID:'test',GOOGLE_CLIENT_SECRET:'test'}),store);t.after(()=>app.close());
+ const catalog=JSON.parse(await readFile(new URL('../../public/data/nikkes.json',import.meta.url),'utf8')) as {id:string}[];const [first,second]=catalog;
+ const result=(id:string)=>({pool:[id],next:[],index:0,picks:catalog.length-1,round:9,total:catalog.length});
+ const post=(body:object,token='favorite-a')=>app.inject({method:'POST',url:'/api/worldcup/badge',headers:{origin,cookie:'mimir-mk2-local='+token},payload:body});
+ assert.equal((await post(result(first.id),'')).statusCode,401);assert.equal((await post(result('unknown'))).statusCode,400);assert.equal((await post({...result(first.id),picks:0})).statusCode,400);
+ assert.equal((await post(result(first.id))).statusCode,200);const initial=await store.badges(a.id);assert.equal(initial.unlocks.filter(u=>u.id.startsWith('worldcup_')).length,1);await store.displayBadges(a.id,['worldcup_'+first.id]);
+ await post(result(first.id));assert.deepEqual(await store.badges(a.id),initial.displayedBadgeIds.length?initial:{...initial,displayedBadgeIds:['worldcup_'+first.id]});
+ await post(result(second.id));const changed=await store.badges(a.id);assert.deepEqual(changed.unlocks.map(u=>u.id),['worldcup_'+second.id]);assert.deepEqual(changed.displayedBadgeIds,[]);await assert.rejects(store.displayBadges(a.id,['worldcup_'+first.id]));await store.displayBadges(a.id,['worldcup_'+second.id]);
+ await post(result(first.id),'favorite-b');assert.deepEqual((await store.badges(b.id)).unlocks.map(u=>u.id),['worldcup_'+first.id]);assert.deepEqual((await store.badges(a.id)).unlocks.map(u=>u.id),['worldcup_'+second.id]);
+ await Promise.all([post(result(first.id)),post(result(second.id))]);assert.equal((await store.badges(a.id)).unlocks.filter(u=>u.id.startsWith('worldcup_')).length,1);
+});

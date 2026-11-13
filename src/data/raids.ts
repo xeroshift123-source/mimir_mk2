@@ -1,0 +1,442 @@
+// Source: C:/MIMIR/lib/data/raid_data.dart. Periods are source records, not live schedules.
+export interface UnionBoss { element:string; name:string; keyword:string[] }
+export interface RaidInfo { id:string; type:'solo'|'union'; seasonName:string; period:string; startsAt?:string; endsAt?:string; completed?:boolean; imagePath:string; bossName?:string; bossElement?:string; weakness?:string; keyword?:string[]; unionBosses?:UnionBoss[] }
+export const raidHistory: RaidInfo[] = [
+  {
+    "id": "solo-1",
+    "type": "solo",
+    "seasonName": "SEASON 36",
+    "period": "4/30(목) 12:00 ~ 5/7(수) 4:59",
+    "imagePath": "assets/images/raids/wigobi.png",
+    "bossName": "에고비스타",
+    "bossElement": "수냉",
+    "weakness": "전격",
+    "keyword": [
+      "파츠"
+    ],
+    "startsAt": "2026-04-30T12:00:00+09:00",
+    "endsAt": "2026-05-07T04:59:00+09:00"
+  },
+  {
+    "id": "union-2",
+    "type": "union",
+    "seasonName": "26년 5월",
+    "period": "5/15(금)",
+    "imagePath": "assets/images/dororong.png",
+    "unionBosses": [
+      {
+        "element": "풍압",
+        "name": "두리안",
+        "keyword": []
+      },
+      {
+        "element": "수냉",
+        "name": "헤비메탈",
+        "keyword": []
+      },
+      {
+        "element": "작열",
+        "name": "모더니아 (★)",
+        "keyword": []
+      },
+      {
+        "element": "철갑",
+        "name": "리빌드 벌컨R",
+        "keyword": []
+      },
+      {
+        "element": "전격",
+        "name": "알트아이젠 (★)",
+        "keyword": []
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-3",
+    "type": "solo",
+    "seasonName": "SEASON 37",
+    "period": "5/28(목) 12:00 ~ 6/4(목) 4:59",
+    "imagePath": "assets/images/raids/ultra.webp",
+    "bossName": "울라리",
+    "bossElement": "작열",
+    "weakness": "수냉",
+    "keyword": [
+      "관통데미지",
+      "코어",
+      "파츠"
+    ],
+    "startsAt": "2026-05-28T12:00:00+09:00",
+    "endsAt": "2026-06-04T04:59:00+09:00"
+  },
+  {
+    "id": "union-4",
+    "type": "union",
+    "seasonName": "26년 6월",
+    "period": "6/12(금)",
+    "imagePath": "assets/images/dororong.png",
+    "unionBosses": [
+      {
+        "element": "작열",
+        "name": "시니스터",
+        "keyword": []
+      },
+      {
+        "element": "풍압",
+        "name": "레플리카 레드슈즈",
+        "keyword": []
+      },
+      {
+        "element": "수냉",
+        "name": "니힐리스타 (★)",
+        "keyword": []
+      },
+      {
+        "element": "전격",
+        "name": "리빌드 빅 토르소",
+        "keyword": []
+      },
+      {
+        "element": "철갑",
+        "name": "울트라 (★)",
+        "keyword": []
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-5",
+    "type": "solo",
+    "seasonName": "SEASON 38.5",
+    "period": "7/3(금) 12:00 ~ 7/8(수) 4:59",
+    "imagePath": "assets/images/raids/annihilio.png",
+    "bossName": "애니힐리오(RE)",
+    "bossElement": "철갑",
+    "weakness": "풍압",
+    "keyword": [
+      "코어",
+      "파츠"
+    ],
+    "startsAt": "2026-07-03T12:00:00+09:00",
+    "endsAt": "2026-07-08T04:59:00+09:00"
+  },
+  {
+    "id": "union-6",
+    "type": "union",
+    "seasonName": "26년 7월",
+    "period": "7/10(금)",
+    "imagePath": "assets/images/union_raid.webp",
+    "unionBosses": [
+      {
+        "element": "작열",
+        "name": "리빌드 오벨리스크",
+        "keyword": [
+          "파츠"
+        ]
+      },
+      {
+        "element": "풍압",
+        "name": "크라켄 (★)",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      },
+      {
+        "element": "수냉",
+        "name": "두리안",
+        "keyword": [
+          "코어",
+          "힐"
+        ]
+      },
+      {
+        "element": "전격",
+        "name": "알트아이젠 (★)",
+        "keyword": [
+          "파츠"
+        ]
+      },
+      {
+        "element": "철갑",
+        "name": "닥터",
+        "keyword": [
+          "코어"
+        ]
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-7",
+    "type": "solo",
+    "seasonName": "SEASON 39",
+    "period": "7/16(금) 12:00 ~ 7/23(수) 4:59",
+    "imagePath": "assets/images/raids/island_eater2.png",
+    "bossName": "아일랜드이터",
+    "bossElement": "전격",
+    "weakness": "철갑",
+    "keyword": [
+      "코어",
+      "힐"
+    ],
+    "startsAt": "2026-07-16T12:00:00+09:00",
+    "endsAt": "2026-07-23T04:59:00+09:00"
+  },
+  {
+    "id": "union-8",
+    "type": "union",
+    "seasonName": "26년 8월",
+    "period": "7/31(금)",
+    "imagePath": "assets/images/union_raid.webp",
+    "unionBosses": [
+      {
+        "element": "작열",
+        "name": "플레이트",
+        "keyword": [
+          "코어",
+          "타수"
+        ]
+      },
+      {
+        "element": "풍압",
+        "name": "리빌드 핑거즈",
+        "keyword": [
+          "코어"
+        ]
+      },
+      {
+        "element": "수냉",
+        "name": "토커티브 (★)",
+        "keyword": [
+          "코어",
+          "파츠",
+          "즉사"
+        ]
+      },
+      {
+        "element": "전격",
+        "name": "선바스",
+        "keyword": [
+          "코어"
+        ]
+      },
+      {
+        "element": "철갑",
+        "name": "마테리얼H (★)",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-9",
+    "type": "solo",
+    "seasonName": "SEASON 40",
+    "period": "8/20(목) 12:00 ~ 8/27(목) 4:59",
+    "imagePath": "assets/images/raids/luxury_spider.png",
+    "bossName": "사치스러운 거미",
+    "bossElement": "풍압",
+    "weakness": "작열",
+    "keyword": [
+      "잡몹"
+    ],
+    "startsAt": "2026-08-20T12:00:00+09:00",
+    "endsAt": "2026-08-27T04:59:00+09:00"
+  },
+  {
+    "id": "union-10",
+    "type": "union",
+    "seasonName": "26년 9월",
+    "period": "9/4(금)",
+    "imagePath": "assets/images/union_raid.webp",
+    "unionBosses": [
+      {
+        "element": "작열",
+        "name": "모더니아 (★)",
+        "keyword": [
+          "파츠",
+          "코어"
+        ]
+      },
+      {
+        "element": "풍압",
+        "name": "애니힐리오 (★)",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      },
+      {
+        "element": "수냉",
+        "name": "툼스톤",
+        "keyword": [
+          "코어",
+          "잡몹"
+        ]
+      },
+      {
+        "element": "전격",
+        "name": "리빌드 빅 토르소",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      },
+      {
+        "element": "철갑",
+        "name": "레이턴스",
+        "keyword": [
+          "코어",
+          "차지 디버프"
+        ]
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-11",
+    "type": "solo",
+    "seasonName": "SEASON 41",
+    "period": "9/24(목) 12:00 ~ 10/1(목) 4:59",
+    "imagePath": "assets/images/raids/liberalio_body.png",
+    "bossName": "리버렐리오 바디",
+    "bossElement": "작열",
+    "weakness": "수냉",
+    "keyword": [
+      "방무뎀",
+      "코어"
+    ],
+    "startsAt": "2026-09-24T12:00:00+09:00",
+    "endsAt": "2026-10-01T04:59:00+09:00"
+  },
+  {
+    "id": "union-12",
+    "type": "union",
+    "seasonName": "26년 10월",
+    "period": "10/9(금)",
+    "imagePath": "assets/images/union_raid.webp",
+    "unionBosses": [
+      {
+        "element": "수냉",
+        "name": "두리안",
+        "keyword": [
+          "코어",
+          "힐"
+        ]
+      },
+      {
+        "element": "철갑",
+        "name": "핑거즈",
+        "keyword": [
+          "코어"
+        ]
+      },
+      {
+        "element": "전격",
+        "name": "크리스탈 체임버 (★)",
+        "keyword": [
+          "파츠",
+          "관통"
+        ]
+      },
+      {
+        "element": "작열",
+        "name": "리빌드 벌컨R",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      },
+      {
+        "element": "풍압",
+        "name": "크라켄",
+        "keyword": [
+          "코어",
+          "파츠"
+        ]
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-13",
+    "type": "solo",
+    "seasonName": "SEASON 42",
+    "period": "10/15(목) 12:00 ~ 10/22(목) 4:59",
+    "imagePath": "assets/images/raids/altruia.png",
+    "bossName": "앨트루이아",
+    "bossElement": "수냉",
+    "weakness": "전격",
+    "keyword": [
+      "파츠",
+      "방무뎀"
+    ],
+    "startsAt": "2026-10-15T12:00:00+09:00",
+    "endsAt": "2026-10-22T04:59:00+09:00"
+  },
+  {
+    "id": "union-14",
+    "type": "union",
+    "seasonName": "26년 11월",
+    "period": "10/30(금)",
+    "imagePath": "assets/images/union_raid.webp",
+    "unionBosses": [
+      {
+        "element": "수냉",
+        "name": "블랙스미스",
+        "keyword": [
+          "코어"
+        ]
+      },
+      {
+        "element": "철갑",
+        "name": "오벨리스크",
+        "keyword": [
+          "코어"
+        ]
+      },
+      {
+        "element": "전격",
+        "name": "크리스탈 아머 (★)",
+        "keyword": [
+          "파츠"
+        ]
+      },
+      {
+        "element": "작열",
+        "name": "알트아이젠 (★)",
+        "keyword": [
+          "파츠"
+        ]
+      },
+      {
+        "element": "풍압",
+        "name": "리빌드 빅 암즈",
+        "keyword": [
+          "코어"
+        ]
+      }
+    ],
+    "completed": true
+  },
+  {
+    "id": "solo-15",
+    "startsAt": "2026-11-12T12:00:00+09:00",
+    "endsAt": "2026-11-19T04:59:00+09:00",
+    "type": "solo",
+    "seasonName": "SEASON 43",
+    "period": "11/12(목) 12:00 ~ 11/19(목) 4:59",
+    "imagePath": "assets/images/raids/goddess_of_victory.png",
+    "bossName": "승리의 여신",
+    "bossElement": "풍압",
+    "weakness": "작열",
+    "keyword": [
+      "코어",
+      "???"
+    ]
+  }
+];

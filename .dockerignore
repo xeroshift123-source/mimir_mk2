@@ -1,0 +1,12 @@
+node_modules
+dist
+server-dist
+.git
+.env
+.env.*
+backups
+deploy/.env
+deploy/oci/.terraform
+*.tfstate*
+*.tfvars
+*.png

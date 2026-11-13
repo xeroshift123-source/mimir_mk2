@@ -1,0 +1,13 @@
+node_modules/
+dist/
+
+.env
+.env.*
+!.env.example
+server-dist/
+backups/
+deploy/.env
+*.tfstate*
+.terraform/
+*.tfvars
+!*.tfvars.example

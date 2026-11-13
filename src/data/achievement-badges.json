@@ -1,0 +1,160 @@
+[
+  {
+    "id": "thousand_days",
+    "name": "천일동안",
+    "condition": "생성된 지 1,000일 이상 지난 계정 보유",
+    "comment": "BA-01 다운!",
+    "image": "/assets/images/badge/1000DAYS.png",
+    "imageScale": 1.6,
+    "focusX": -0.12,
+    "focusY": -0.42
+  },
+  {
+    "id": "fashionista",
+    "name": "패셔니스타",
+    "condition": "코스튬 100개 이상 보유",
+    "comment": "지르는 건 언제나 즐겁지?",
+    "image": "/assets/images/badge/LUCHE.png"
+  },
+  {
+    "id": "counters",
+    "name": "COUNTERS",
+    "condition": "라피 : 레드 후드, 아니스 : 트윙클 스타, 네온 : 비전아이의 호감도 40",
+    "comment": "명실공히 최고의 지휘관과 스쿼드로 불리기에 충분",
+    "image": "/assets/images/badge/COUNTERS.webp"
+  },
+  {
+    "id": "extreme_firepower",
+    "name": "초화력",
+    "condition": "화력형 콘솔을 방어형 콘솔보다 10레벨 이상 높이기",
+    "comment": "화력~! 화력~!",
+    "image": "/assets/images/badge/FIREPOWER.png"
+  },
+  {
+    "id": "reliable_companion",
+    "name": "믿음직한 동반자",
+    "condition": "15레벨 큐브를 하나 이상 장착",
+    "comment": "말은 할 수 없습니다.",
+    "image": "/assets/images/badge/CUBE.png"
+  },
+  {
+    "id": "no_distinction",
+    "name": "귀천은 없다",
+    "condition": "등급이 SR 또는 R인 니케의 장비 4부위를 오버로드",
+    "comment": "강한 니케, 약한 니케, 그런 건 지휘관이 멋대로 정하는 것.",
+    "image": "/assets/nikke/rapi.webp"
+  },
+  {
+    "id": "union_leader_tears",
+    "name": "유니온 장의 눈물",
+    "condition": "길티, 신, 퀀시, 니힐리스타 중 한 명 이상을 3돌파 이상 달성",
+    "comment": "이쁘잖아요",
+    "image": "/assets/images/badge/TEAR.webp"
+  },
+  {
+    "id": "battle_data",
+    "name": "배틀 데이터",
+    "condition": "덱 라이브러리에 덱 공유하기",
+    "comment": "감사합니다",
+    "image": "/assets/images/badge/BATTLEDATA.png"
+  },
+  {
+    "id": "first_class_fire",
+    "name": "화둔",
+    "condition": "작열 속성 우월코드 합산 상위 4% 이내 달성",
+    "comment": "작열 속성 1등급 지휘관입니다.",
+    "image": "/assets/icons/elements/icon-elements-Fire.webp"
+  },
+  {
+    "id": "first_class_water",
+    "name": "수둔",
+    "condition": "수냉 속성 우월코드 합산 상위 4% 이내 달성",
+    "comment": "수냉 속성 1등급 지휘관입니다.",
+    "image": "/assets/icons/elements/icon-elements-Water.webp"
+  },
+  {
+    "id": "first_class_wind",
+    "name": "풍둔",
+    "condition": "풍압 속성 우월코드 합산 상위 4% 이내 달성",
+    "comment": "풍압 속성 1등급 지휘관입니다.",
+    "image": "/assets/icons/elements/icon-elements-Wind.webp"
+  },
+  {
+    "id": "first_class_electric",
+    "name": "뇌둔",
+    "condition": "전격 속성 우월코드 합산 상위 4% 이내 달성",
+    "comment": "전격 속성 1등급 지휘관입니다.",
+    "image": "/assets/icons/elements/icon-elements-Electric.webp"
+  },
+  {
+    "id": "first_class_iron",
+    "name": "토둔",
+    "condition": "철갑 속성 우월코드 합산 상위 4% 이내 달성",
+    "comment": "철갑 속성 1등급 지휘관입니다.",
+    "image": "/assets/icons/elements/icon-elements-Iron.webp"
+  },
+  {
+    "id": "shoes_20",
+    "name": "Nikkes, On her feet",
+    "condition": "+5 오버로드 신발 20개 이상 보유",
+    "comment": "Make my love complete.",
+    "image": "/assets/images/badge/SHOES.png"
+  },
+  {
+    "id": "level_400",
+    "name": "CD",
+    "condition": "400레벨 이상 니케 보유",
+    "comment": "니응애 탈출.",
+    "image": "/assets/images/badge/CD.webp"
+  },
+  {
+    "id": "level_500",
+    "name": "니케500",
+    "condition": "500레벨 이상 니케 보유",
+    "comment": "카페인 없이 건강해요!",
+    "image": "/assets/images/badge/NIKKE500.png",
+    "imageScale": 1.28,
+    "focusX": 0.12
+  },
+  {
+    "id": "level_600",
+    "name": "600족",
+    "condition": "600레벨 이상 니케 보유",
+    "comment": "도로도로!",
+    "image": "/assets/images/badge/600.png",
+    "imageScale": 2.25,
+    "focusX": -0.12,
+    "focusY": -0.55
+  },
+  {
+    "id": "level_700",
+    "name": "귀여워",
+    "condition": "700레벨 이상 니케 보유",
+    "comment": "ㄱㅇㅇ",
+    "image": "/assets/images/badge/700.png"
+  },
+  {
+    "id": "level_808",
+    "name": "여명",
+    "condition": "808레벨 이상 니케 보유",
+    "comment": "정말 좋아요",
+    "image": "/assets/images/badge/DAWN.png"
+  },
+  {
+    "id": "level_911",
+    "name": "대체재는 없다.",
+    "condition": "911레벨 이상 니케 보유",
+    "comment": "There is no substitute",
+    "image": "/assets/images/badge/911.png",
+    "imageScale": 1.28
+  },
+  {
+    "id": "level_1000",
+    "name": "전설",
+    "condition": "1,000레벨 이상 니케 보유",
+    "comment": "파티는 끝났다.",
+    "image": "/assets/images/badge/1000.webp",
+    "imageScale": 1.35,
+    "focusY": 0.12
+  }
+]

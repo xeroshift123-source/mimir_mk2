@@ -1,0 +1,133 @@
+{
+  "OUR FIRST ENCOUNTER": {
+    "colors": [
+      "#D51F2A",
+      "#09090B"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFC3C7"
+  },
+  "STORY COMPLETE": {
+    "colors": [
+      "#EF3340",
+      "#08080A"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFC4C7"
+  },
+  "TOGETHER WITH NIKKE": {
+    "colors": [
+      "#20C6AD",
+      "#087D82"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#B8FFF1"
+  },
+  "MAXIMUM POTENTIAL": {
+    "colors": [
+      "#111216",
+      "#111216",
+      "#D01D32"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FF5364"
+  },
+  "SKILL INVESTMENT": {
+    "colors": [
+      "#FFFCED",
+      "#EADDBE"
+    ],
+    "textColor": "#201D18",
+    "accent": "#9B751E"
+  },
+  "OVERLOAD": {
+    "colors": [
+      "#FF9D00",
+      "#FF5A22",
+      "#B91224"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFE29A"
+  },
+  "PRECIOUS GIFT": {
+    "colors": [
+      "#1756A9",
+      "#12213D",
+      "#080C15"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFD33D"
+  },
+  "MASTERPIECE SHOES": {
+    "colors": [
+      "#F6F6F8",
+      "#BBBCC4",
+      "#111218"
+    ],
+    "textColor": "#111218",
+    "accent": "#CE2448"
+  },
+  "FASHION COLLECTION": {
+    "colors": [
+      "#FFC928",
+      "#EF8E00",
+      "#17130A"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFF0A6"
+  },
+  "EVANGELION LOVE": {
+    "colors": [
+      "#17132A",
+      "#472B69",
+      "#83A900"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#D4FF54"
+  },
+  "CROW DEVOTEE": {
+    "colors": [
+      "#151217",
+      "#28141B",
+      "#8D1B2D"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FF9BA8"
+  },
+  "FIREPOWER!": {
+    "colors": [
+      "#070A11",
+      "#093E83",
+      "#088DDF"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#75DCFF"
+  },
+  "ULTIMATE NIKKE": {
+    "colors": [
+      "#090B10",
+      "#251134",
+      "#D6A528"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFE17A"
+  },
+  "ONE LAST STORY": {
+    "colors": [
+      "#11162D",
+      "#4B237B",
+      "#120D22"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#D8B4FF"
+  },
+  "DESTINED PARTNER": {
+    "colors": [
+      "#6D1231",
+      "#2A101E",
+      "#D4A84F"
+    ],
+    "textColor": "#ffffff",
+    "accent": "#FFE6A0"
+  }
+}

@@ -1,0 +1,2 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {previewVote} from '../src/deck-vote';
+test('new votes, cancellation and changing direction preserve totals',()=>{const initial={myVote:0,upvotes:5,downvotes:2};const up=previewVote(initial,1);assert.deepEqual(up,{myVote:1,upvotes:6,downvotes:2});assert.deepEqual(previewVote(up,1),initial);assert.deepEqual(previewVote(up,-1),{myVote:-1,upvotes:5,downvotes:3});assert.deepEqual(initial,{myVote:0,upvotes:5,downvotes:2});});

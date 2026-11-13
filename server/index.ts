@@ -1,0 +1,14 @@
+import {readConfig} from './config.js';
+import {Store,postgres} from './store.js';
+import {buildApp} from './app.js';
+import {startScoreWorker} from './scores.js';
+const config=readConfig();
+const store=config.DATABASE_URL?new Store(postgres(config.DATABASE_URL)):null;
+if(store)await store.migrate();
+const app=await buildApp(config,store);
+const stopScores=store&&config.DILDORO_API_KEY?startScoreWorker(store,config.DILDORO_API_KEY):()=>{};
+const cleanup=store?setInterval(()=>void store.clean().catch(()=>{}),60*60*1000):undefined;cleanup?.unref();
+app.addHook('onClose',async()=>{stopScores();if(cleanup)clearInterval(cleanup);await store?.db.close();});
+await app.listen({port:config.PORT,host:'0.0.0.0'});
+console.log(`MIMIR MK2 API listening on port ${config.PORT}; account services ${store&&config.oauthConfigured?'configured':'awaiting configuration'}.`);
+for(const signal of ['SIGINT','SIGTERM'] as const)process.once(signal,()=>void app.close());

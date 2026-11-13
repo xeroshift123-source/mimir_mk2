@@ -1,0 +1,10 @@
+region           = "YOUR_OCI_REGION"
+tenancy_ocid     = "ocid1.tenancy..."
+compartment_ocid = "ocid1.compartment..."
+ssh_public_key   = "ssh-ed25519 YOUR_PUBLIC_KEY"
+ssh_source_cidr  = "YOUR_ADMIN_IP/32"
+publish_web      = false
+# Select a shape and capacity available in your tenancy; review billing before apply.
+shape           = "VM.Standard.A1.Flex"
+ocpus           = 1
+memory_gbs      = 6

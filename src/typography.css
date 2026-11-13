@@ -1,0 +1,10 @@
+/* Match the stable 14px / 700 home action typography across UI controls. */
+:root{--font-ui:'Space Grotesk','Noto Sans KR',sans-serif;--font-button-size:14px;--font-button-weight:700;font-family:var(--font-ui)}
+:root :is(button,input,select,textarea){font-family:var(--font-ui)}
+:root :is(button,.primary,.account-google,.builder-tabs a,.toolbar-measure){font-weight:var(--font-button-weight);letter-spacing:0;line-height:1.5}
+:root :is(.hero-actions>.primary,.hero-actions>.text-button,.account-user button,.account-challenge,.account-proof button,.account-submit,.account-google,.account-section-heading button,.account-add-link>summary,.account-withdraw-controls button,.my-connect,.journey-tools button,.raid-build,.raid-library){font-size:var(--font-button-size);font-weight:var(--font-button-weight);letter-spacing:0;line-height:1.5}
+:root .account-dialog button{font-family:var(--font-ui);font-weight:var(--font-button-weight)}
+:root :is(.account-personal button span,.account-email,.journey-note,.recap-notice,.linked-server-chip){font-family:var(--font-ui);font-weight:500;line-height:1.6}
+:root :is(.my-heading h1,.builder-heading h1,.account-page-panel h2,.section-heading h2){font-family:var(--font-ui);font-weight:700}
+:root :is(.account-personal button,.linked-commander-name strong,.account-google-identity strong){font-family:var(--font-ui);font-weight:700}
+:root .header nav :is(a,button){font-family:var(--font-ui);font-size:14px;font-weight:700;letter-spacing:0;line-height:1.5}@media(max-width:760px){:root .header nav :is(a,button){font-size:13px}}

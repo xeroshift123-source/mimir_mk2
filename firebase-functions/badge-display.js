@@ -1,0 +1,6 @@
+'use strict';
+const {FieldValue}=require('firebase-admin/firestore');
+function validateDisplay(ids,unlocks){if(!Array.isArray(ids)||ids.length>10||ids.some(id=>typeof id!=='string'||!id||!Object.hasOwn(unlocks,id))||new Set(ids).size!==ids.length){const e=Error('획득한 뱃지를 최대 10개까지 선택해 주세요.');e.status=400;throw e;}return [...ids];}
+async function saveDisplay(db,uid,ids){const ref=db.collection('users').doc(uid);return db.runTransaction(async tx=>{const snapshot=await tx.get(ref),data=snapshot.data()||{},badgeIds=validateDisplay(ids,data.badgeUnlocks||{});if(JSON.stringify(data.displayedBadgeIds||[])!==JSON.stringify(badgeIds))tx.set(ref,{displayedBadgeIds:badgeIds,badgesUpdatedAt:FieldValue.serverTimestamp()},{merge:true});return badgeIds;});}
+async function publicShowcase(db,uid){if(typeof uid!=='string'||!uid||uid.length>128||uid.includes('/')){const e=Error('작성자를 확인해 주세요.');e.status=400;throw e;}const snapshot=await db.collection('users').doc(uid).get(),data=snapshot.data()||{};const badgeIds=(data.displayedBadgeIds||[]).filter(id=>Object.hasOwn(data.badgeUnlocks||{},id)).slice(0,10);return {displayedBadgeIds:badgeIds,unlocks:badgeIds.map(id=>({id,acquiredAt:data.badgeUnlocks[id].acquiredAt?.toDate?.().toISOString()||data.badgeUnlocks[id].acquiredAt||''}))};}
+module.exports={validateDisplay,saveDisplay,publicShowcase};

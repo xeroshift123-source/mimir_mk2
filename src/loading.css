@@ -1,0 +1,10 @@
+.loading-spinner{display:inline-block;width:16px;height:16px;flex:none;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-3px;animation:mimir-loading-spin .75s linear infinite}
+.loading-message{display:inline-flex;align-items:center;gap:8px;max-width:100%;vertical-align:middle}
+@keyframes mimir-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.loading-spinner{animation:none}}
+
+[data-loading="true"]::before{content:"";display:inline-block;width:16px;height:16px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-3px;margin-right:8px;animation:mimir-loading-spin .75s linear infinite}
+@media(prefers-reduced-motion:reduce){[data-loading="true"]::before{animation:none}}
+
+.library-post-actions [data-vote]:disabled::before{content:"";display:inline-block;width:14px;height:14px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:mimir-loading-spin .75s linear infinite}
+@media(prefers-reduced-motion:reduce){.library-post-actions [data-vote]:disabled::before{animation:none}}

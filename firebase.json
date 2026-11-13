@@ -1,0 +1,1 @@
+{"functions":[{"source":"firebase-functions","codebase":"mimir-comparisons","ignore":["node_modules","*.test.cjs","firebase-debug.log"]}]}

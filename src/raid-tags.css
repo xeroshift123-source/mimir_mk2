@@ -1,0 +1,7 @@
+/* One token set for raid keywords across home, solo and union views. */
+:root{--raid-tag-background:#ffffff0d;--raid-tag-text:#deded8;--raid-tag-radius:4px;--raid-tag-accent:#f2a45d}
+:root[data-theme="light"]{--raid-tag-background:#f9faf7;--raid-tag-text:#454940;--raid-tag-accent:#a84f08}
+#app .raid-keyword{display:inline-flex;align-items:center;justify-content:center;min-height:26px;box-sizing:border-box;padding:4px 9px;margin:0;border:0;border-radius:var(--raid-tag-radius);background:var(--raid-tag-background);color:var(--raid-tag-text);font-size:12px;font-weight:500;line-height:1.5;letter-spacing:0;white-space:nowrap}
+
+#app .raid-keyword::before{content:"#";color:var(--raid-tag-accent);margin-right:2px;font-weight:700}
+
