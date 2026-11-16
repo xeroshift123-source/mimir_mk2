@@ -249,10 +249,10 @@
 :root[data-theme="light"] .my-page .detail-nikke-badges .detail-mono-symbol{filter:brightness(0);opacity:.8}
 :root .my-page .detail-nikke-badges .detail-weapon-badge{font-family:var(--font-ui);font-size:11px;font-weight:600;line-height:1;min-width:33px}
 :root .my-page .commander-freshness{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-:root .my-page .commander-refresh{display:inline-grid;place-items:center;width:27px;height:27px;padding:5px;margin-left:3px;border:0;border-radius:8px;background:transparent;color:#d98238;flex-shrink:0;cursor:pointer}
+:root .my-page .commander-refresh{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:8px 12px;margin-left:3px;border:0;border-radius:8px;background:var(--accent);color:var(--on-accent);font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0;cursor:pointer}
 :root .my-page .commander-refresh svg{width:16px;height:16px}
-:root .my-page .commander-refresh:hover:not(:disabled){background:#ff922e14;color:#ef8c37}
-:root .my-page .commander-refresh:disabled{opacity:.5;cursor:wait}
+:root .my-page .commander-refresh:hover:not(:disabled){background:var(--accent);color:var(--on-accent);filter:brightness(1.06)}
+:root .my-page .commander-refresh:disabled{opacity:.8;cursor:wait}
 .commander-refresh.is-refreshing svg{animation:commander-refresh-spin 1s linear infinite}
 @keyframes commander-refresh-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.commander-refresh.is-refreshing svg{animation:none}}
@@ -476,3 +476,5 @@
 .my-page .detail-basic-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
 .my-page .detail-coop-main{flex-wrap:wrap}
 .my-page .detail-nikke-badges{flex-wrap:wrap}
+
+:root .my-page .commander-name{flex-wrap:wrap}

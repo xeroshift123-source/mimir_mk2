@@ -1,3 +1,7 @@
+import type {Nikke} from './deck-model';
+export type WorldcupEntrant=Pick<Nikke,'id'|'name'|'imageUrl'>&Partial<Nikke>&{isNpc?:boolean};
+export interface WorldcupScope{includeMassProduced:boolean;includeCollaboration:boolean;includeNpc?:boolean}
+export function worldcupParticipants<T extends WorldcupEntrant>(catalog:T[],scope:WorldcupScope){return catalog.filter(n=>n.isNpc?scope.includeNpc===true:(scope.includeMassProduced||n.rank!=='R')&&(scope.includeCollaboration||n.company!=='Abnormal'));}
 export interface WorldcupState{pool:string[];next:string[];index:number;picks:number;round:number;total:number}
 export function shuffled<T>(items:T[],random= Math.random){const result=[...items];for(let i=result.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}return result;}
 export function startWorldcup(ids:string[],random=Math.random):WorldcupState{const pool=shuffled([...new Set(ids)],random);if(pool.length<2)throw Error('대결할 니케가 부족해요.');return {pool,next:[],index:0,picks:0,round:1,total:pool.length};}

@@ -6,7 +6,7 @@ import type {Growth} from './profile-data';
 import type {BadgeState} from '../shared/achievements';
 import {api,accountSession,isTestAccount,usesFirebase} from './account-client';
 import {buildRecap} from './recap-data';
-import type {RecapCard} from './recap-data';
+import type {RecapContext,RecapCard} from './recap-data';
 import './commander-journey.css';
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const pendingBadgeSaves=new Map<string,Promise<void>>(),badgeDrafts=new Map<string,string[]>();
@@ -52,8 +52,8 @@ const recapIcon=(name:string)=>{
  const paths:Record<string,string>={prev:'<path d="m14 6-6 6 6 6"/>',next:'<path d="m10 6 6 6-6 6"/>',copy:'<rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/>',save:'<path d="M12 3v12m-4-4 4 4 4-4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>'};
  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths[name]+'</svg>';
 };
-export function showRecap(roster:Growth[],seed:string,nickname:string,demo=false,skipped=0){
- const cards=buildRecap(roster,seed),d=dialog('나의 리캡'),body=d.querySelector<HTMLElement>('.journey-body')!;let index=0,saving=false,notice='';
+export function showRecap(roster:Growth[],seed:string,nickname:string,demo=false,skipped=0,context:RecapContext={}){
+ const cards=buildRecap(roster,seed,context),d=dialog('나의 리캡'),body=d.querySelector<HTMLElement>('.journey-body')!;let index=0,saving=false,notice='';
  const render=()=>{const c=cards[index];body.innerHTML=`<p class="journey-note">${demo?'합성 데이터 예시 · ':''}${esc(nickname)} · 현재 저장된 육성 정보${skipped?' · 정보 미수집 '+skipped+'명 제외':''}</p>${c?`<article class="recap-card">${recapSvg(c,demo,index+1,cards.length)}</article><div class="recap-toolbar" role="toolbar" aria-label="리캡 카드 이동과 이미지 내보내기"><div class="recap-navigation"><button data-prev title="이전 카드" aria-label="이전 카드" ${index===0||saving?'disabled':''}>${recapIcon('prev')}</button><span aria-live="polite">${index+1}<i>/</i>${cards.length}</span><button data-next title="다음 카드" aria-label="다음 카드" ${index===cards.length-1||saving?'disabled':''}>${recapIcon('next')}</button></div><div class="recap-export"><button data-copy title="이미지 복사" aria-label="이미지 복사" ${saving?'disabled':''}>${recapIcon('copy')}</button><button data-download title="이미지 저장" aria-label="이미지 저장" ${saving?'disabled':''}>${recapIcon('save')}</button></div></div>`:'<p>리캡을 만들 수 있는 육성 정보가 없어요.</p>'}<p class="recap-notice" role="status">${saving?loadingMarkup(notice):esc(notice)}</p>`;};
  body.addEventListener('click',e=>{
   const b=(e.target as HTMLElement).closest('button');if(!b||saving)return;

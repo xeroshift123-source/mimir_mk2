@@ -5,7 +5,7 @@ const ts=require('typescript');
 // Load the small pure TS modules without bundling the browser app.
 const cache=new Map();
 function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file).exports;const module={exports:{}};cache.set(file,module);if(file.endsWith('.json'))module.exports=JSON.parse(fs.readFileSync(file,'utf8'));else{const output=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;new Function('require','module','exports',output)(name=>load(path.resolve(path.dirname(file),name+(path.extname(name)?'':'.ts'))),module,module.exports);}return module.exports;}
-const {emptyProfileFilters,filterAndSortRoster,level40Cp,overloadTotal}=load('src/profile-controls.ts');
+const {emptyProfileFilters,filterAndSortRoster,level40Cp,overloadTotal,pyRound}=load('src/profile-controls.ts');
 const {demoGrowth}=load('src/profile-data.ts');
 const catalog=JSON.parse(fs.readFileSync('public/data/nikkes.json','utf8'));
 const roster=demoGrowth(catalog);
@@ -21,15 +21,25 @@ assert.equal(level40Cp({...roster[0],equipment:[]}),null);
 assert.equal(level40Cp({...roster[0],equipment:roster[0].equipment.map(e=>({...e,options:e.options.map(o=>({...o,tier:undefined}))}))}),null);
 const fixture={...roster[0],nikke:{...roster[0].nikke,type:'ATK',weaponType:'AR'},grade:0,core:0,bond:1,research:{common:0,role:0,company:0},skills:[1,1,1],cube:null,collection:null,equipment:['머리','몸통','팔','다리'].map(name=>({name,level:0,options:[{name:'공격력',value:4.77,tier:1}]}))};
 // Independent sums from the original level-40/base and equipment tables.
-const expected=Math.trunc((.7*306483+19.35*13402+70*2038)*1.411277/100);
+const expected=8701; // survival 357198 + attack 259328, coefficient 1.411277.
+for(const [input,output] of [[2.5,2],[3.5,4],[4.499999,4],[4.500001,5],[-2.5,-2]])assert.equal(pyRound(input),output);
 assert.equal(level40Cp(fixture,false),expected);
+// Independent integer arithmetic covers all limit-break/core/equipment combinations.
+const halfEven=(n,d)=>{const q=n/d,r=n%d;return Number(q+(r*2n>d||(r*2n===d&&q%2n===1n)?1n:0n));};
+for(let grade=0;grade<=3;grade++)for(let core=0;core<=7;core++)for(let level=0;level<=5;level++){
+ const sample={...fixture,grade,core,equipment:fixture.equipment.map(e=>({...e,level,options:[{name:'우월 코드',value:9.54,tier:1}]}))};
+ const stat=(base,fixed,equip)=>{const lb=(BigInt(base)*BigInt(100+2*grade)+BigInt(fixed*grade*100))/100n;return (lb*BigInt(100+2*core)+BigInt(equip*(10+level)*10))/100n;};
+ const hp=stat(41175,3000,245908)+19400n,atk=stat(1830,20,10934)+638n,def=stat(275,100,1635)+128n;
+ const raw=7n*(hp+100n*def)/10n+atk*387n/20n;
+ assert.equal(level40Cp(sample,false),halfEven(raw*1416877n,100000000n),'integer reference '+[grade,core,level]);
+}
 assert.equal(level40Cp({...roster[0],cube:null}),level40Cp({...roster[0],cube:{name:'재장전',level:1}}),'original assumes a level-15 cube');
 assert(roster.every(g=>Number.isFinite(level40Cp(g))));
 const cp40=filterAndSortRoster(roster,'',emptyProfileFilters(),'cp40');assert(cp40.every((g,i)=>!i||level40Cp(cp40[i-1])>=level40Cp(g)));
 console.log('Passed: multi-select filters, dual elements, all bursts, search, overload sorts/ties, level-40 formula, missing data.');
 
 const {licenseClass}=load('src/nikke-license.ts');
-for(const [cp,label] of [[39999,'자전거 면허'],[40000,'1종 소형'],[49999,'1종 소형'],[50000,'1종 보통'],[59999,'1종 보통'],[60000,'1종 대형'],[69999,'1종 대형'],[70000,'1종 특수'],[79999,'1종 특수'],[80000,'AZX운용']])assert.equal(licenseClass(cp),label);
+for(const [cp,label] of [[39999,'자전거 면허'],[40000,'1종 소형'],[49999,'1종 소형'],[50000,'1종 보통'],[59999,'1종 보통'],[60000,'1종 대형'],[69999,'1종 대형'],[70000,'1종 특수'],[79999,'1종 특수'],[80000,'AZX운용'],[89999,'AZX운용'],[90000,'어드마이어호 운용'],[99999,'어드마이어호 운용'],[100000,'승리의 날개호 운용'],[120000,'승리의 날개호 운용']])assert.equal(licenseClass(cp),label);
 console.log('Passed: original license class boundaries.');
 
 const {licenseScore}=load('src/nikke-license.ts');
@@ -83,3 +93,18 @@ assert.equal(recap.at(-2).eyebrow,'ONE LAST STORY');assert.equal(recap.at(-1).ey
 assert.equal(recap.at(-1).detail,'');assert(recap.at(-1).title.startsWith('당신의 천생연분 니케는...\n'));
 assert.equal(recap.find(c=>c.eyebrow==='SKILL INVESTMENT').textColor,'#201D18');
 console.log('Passed: original recap copy, intro sequence, per-card colors and detail omissions.');
+
+// Restored recap cards use saved metadata; missing values never become invented counts.
+const {recapDate,recapStoryComplete}=load('src/recap-data.ts');
+const context={profile:{joinedAt:'20241115',normalCampaign:6048044,costumeCount:0},now:new Date('2026-11-16T03:00:00Z'),elementScores:{fire:{score:500,sampleCount:100,average:200,topPercent:8},water:{score:900,sampleCount:100,average:100,topPercent:20},iron:{score:1000,sampleCount:19,average:200,topPercent:1}}};
+const restored=buildRecap(roster,'stable',context);
+const first=restored.find(c=>c.eyebrow==='OUR FIRST ENCOUNTER');assert(first.title.startsWith('마리안과 처음 만난 지'));assert(first.title.includes('731일'));assert.equal(first.image,'/assets/nikke/marian.webp');
+assert.equal(restored.find(c=>c.eyebrow==='STORY COMPLETE').image,'/assets/nikke/marian_queen.webp');
+assert(restored.find(c=>c.eyebrow==='MIMIR SCORE').title.includes('작열 속성 미미르 스코어'));assert(restored.find(c=>c.eyebrow==='FASHION COLLECTION').title.includes('0개'));assert.equal(restored.find(c=>c.eyebrow==='FASHION COLLECTION').image,'/assets/nikke/rupee.webp');
+for(const value of [6048044,'NORMAL 48-36',{chapter:48,stage:36},{id:6048044}])assert(recapStoryComplete(value));
+for(const value of [null,0,'48-35',{}])assert(!recapStoryComplete(value));
+for(const value of ['20241115','2024-11-15T00:00:00Z',1731628800,1731628800000,{seconds:1731628800},{_seconds:1731628800},{toDate:()=>new Date('2024-11-15T00:00:00Z')}])assert.equal(recapDate(value).toISOString().slice(0,10),'2024-11-15');
+for(const value of [null,'','bad','20240230'])assert.equal(recapDate(value),null);
+const missing=buildRecap(roster,'stable',{profile:{costumeCount:null},elementScores:{fire:{score:12,sampleCount:100,average:1,topPercent:null}}});assert(!missing.some(c=>['OUR FIRST ENCOUNTER','STORY COMPLETE','FASHION COLLECTION','MIMIR SCORE'].includes(c.eyebrow)));
+assert(buildRecap(roster,'stable',{profile:{joinedAt:'2099-01-01'},now:context.now})[0].title.includes('0일'));
+console.log('Passed: restored recap metadata, legacy dates, campaign formats, valid score rankings and missing-data handling.');

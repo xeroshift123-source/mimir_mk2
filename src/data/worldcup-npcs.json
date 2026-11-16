@@ -1,0 +1,236 @@
+[
+  {
+    "id": "npc_bahamut_fb",
+    "name": "바하무트",
+    "imageUrl": "assets/images/npc/Bahamut_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_behemoth_fb",
+    "name": "베히모스",
+    "imageUrl": "assets/images/npc/Behemoth_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_bernoullia_fb",
+    "name": "베르누이아",
+    "imageUrl": "assets/images/npc/Bernoullia_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_cecil_fb",
+    "name": "세실",
+    "imageUrl": "assets/images/npc/Cecil_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_d.e.e.p._fb",
+    "name": "딥",
+    "imageUrl": "assets/images/npc/D.E.E.P._FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_drilley_fb",
+    "name": "드릴리",
+    "imageUrl": "assets/images/npc/Drilley_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_egovista_fb",
+    "name": "에고비스타",
+    "imageUrl": "assets/images/npc/Egovista_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_einkk_fb",
+    "name": "잉크",
+    "imageUrl": "assets/images/npc/Einkk_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_endless_fb",
+    "name": "엔드리스",
+    "imageUrl": "assets/images/npc/Endless_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_enikk_fb",
+    "name": "에닉",
+    "imageUrl": "assets/images/npc/Enikk_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_eternity_fb",
+    "name": "이터니티",
+    "imageUrl": "assets/images/npc/Eternity_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_eyeri_fb",
+    "name": "아이리",
+    "imageUrl": "assets/images/npc/Eyeri_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_fragile_fb",
+    "name": "프레자일",
+    "imageUrl": "assets/images/npc/Fragile_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_gretel_fb",
+    "name": "그레텔",
+    "imageUrl": "assets/images/npc/Gretel_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_hammering_fb",
+    "name": "해머링",
+    "imageUrl": "assets/images/npc/Hammering_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_hansel_fb",
+    "name": "헨젤",
+    "imageUrl": "assets/images/npc/Hansel_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_indivilia_fb",
+    "name": "인디빌리아",
+    "imageUrl": "assets/images/npc/Indivilia_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_ingrid_fb",
+    "name": "잉그리드",
+    "imageUrl": "assets/images/npc/Ingrid_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_jien_fb",
+    "name": "지엔",
+    "imageUrl": "assets/images/npc/Jien_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_leviathan_fb",
+    "name": "레비아탄",
+    "imageUrl": "assets/images/npc/Leviathan_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_liliweiss_fb",
+    "name": "릴리바이스",
+    "imageUrl": "assets/images/npc/Liliweiss_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_liveryn_fb",
+    "name": "리버린",
+    "imageUrl": "assets/images/npc/Liveryn_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_logey_fb",
+    "name": "로지",
+    "imageUrl": "assets/images/npc/Logey_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_maria_fb",
+    "name": "마리아",
+    "imageUrl": "assets/images/npc/Maria_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_mekami_shifty_mi",
+    "name": "메카미 시프티",
+    "imageUrl": "assets/images/npc/Mekami_Shifty_MI.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_mrs._miss_fb",
+    "name": "미세스 미스",
+    "imageUrl": "assets/images/npc/Mrs._Miss_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_only_one_fb_2",
+    "name": "온리 원",
+    "imageUrl": "assets/images/npc/Only_One_FB_2.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_papillon_alt_fb_2",
+    "name": "파피용",
+    "imageUrl": "assets/images/npc/Papillon_Alt_FB_2.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_pinne_fb",
+    "name": "피나",
+    "imageUrl": "assets/images/npc/Pinne_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_pinocchio_fb",
+    "name": "피노키오",
+    "imageUrl": "assets/images/npc/Pinocchio_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_pretty_fb",
+    "name": "프리티",
+    "imageUrl": "assets/images/npc/Pretty_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_princess_fb",
+    "name": "프린세스",
+    "imageUrl": "assets/images/npc/Princess_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_red_shoes_fb",
+    "name": "레드 슈즈",
+    "imageUrl": "assets/images/npc/Red_Shoes_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_rian_fb",
+    "name": "리안",
+    "imageUrl": "assets/images/npc/Rian_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_rose_%28past%29_fb",
+    "name": "장화",
+    "imageUrl": "assets/images/npc/Rose_%2528past%2529_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_shifty_mi",
+    "name": "시프티",
+    "imageUrl": "assets/images/npc/Shifty_MI.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_syuen_mi",
+    "name": "슈엔",
+    "imageUrl": "assets/images/npc/Syuen_MI.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_yoyo_fb",
+    "name": "요요",
+    "imageUrl": "assets/images/npc/Yoyo_FB.webp",
+    "isNpc": true
+  },
+  {
+    "id": "npc_ziz_fb",
+    "name": "지즈",
+    "imageUrl": "assets/images/npc/Ziz_FB.webp",
+    "isNpc": true
+  }
+]
