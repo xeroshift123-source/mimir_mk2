@@ -30,9 +30,10 @@ export function recapDate(value:unknown):Date|null{
 }
 const seoulDay=(date:Date)=>new Intl.DateTimeFormat('sv-SE',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);
 export function recapStoryComplete(value:unknown):boolean{
- if(Number(value)===6048044)return true;
- if(typeof value==='string')return value.toUpperCase().replace(/NORMAL|STAGE|BOSS/g,'').trim()==='48-36';
- if(value&&typeof value==='object'){const v=value as Record<string,unknown>;return Number(v.id)===6048044||(Number(v.chapter??v.chapter_id)===48&&Number(v.stage??v.stage_id)===36);}
+ // Verified against a user-confirmed 50-36 account saved in existing Firebase.
+ if(Number(value)===6050044)return true;
+ if(typeof value==='string')return value.toUpperCase().replace(/NORMAL|STAGE|BOSS/g,'').trim()==='50-36';
+ if(value&&typeof value==='object'){const v=value as Record<string,unknown>;return Number(v.id)===6050044||(Number(v.chapter??v.chapter_id)===50&&Number(v.stage??v.stage_id)===36);}
  return false;
 }
 export function buildRecap(roster:Growth[],seed:string,context:RecapContext={}):RecapCard[]{
@@ -42,7 +43,7 @@ export function buildRecap(roster:Growth[],seed:string,context:RecapContext={}):
  const profile=context.profile;
  const joined=recapDate(profile?.joinedAt??profile?.createdAt??profile?.created_at);
  if(joined){const start=seoulDay(joined),today=seoulDay(context.now??new Date()),days=Math.max(0,Math.floor((Date.parse(today)-Date.parse(start))/86400000));cards.push({title:`마리안과 처음 만난 지\n${number(days)}일이 지났어요`,detail:'가입일 '+start.replaceAll('-','.'),image:'/assets/nikke/marian.webp',colors:[],eyebrow:'OUR FIRST ENCOUNTER'});}
- if(recapStoryComplete(profile?.normalCampaign))cards.push({title:'니케의 모든 이야기를\n완료했어요',detail:'NORMAL 48-36',image:'/assets/nikke/marian_queen.webp',colors:[],eyebrow:'STORY COMPLETE'});
+ if(recapStoryComplete(profile?.normalCampaign))cards.push({title:'니케의 모든 이야기를\n완료했어요',detail:'NORMAL 50-36',image:'/assets/nikke/marian_queen.webp',colors:[],eyebrow:'STORY COMPLETE'});
  const ranked=Object.entries(context.elementScores??{}).flatMap(([key,stat])=>{const code=Object.keys(elements).find(code=>code.toLowerCase()===key.toLowerCase());return code&&Number.isFinite(stat.score)&&stat.score>0&&stat.sampleCount>=20&&stat.topPercent!==null&&Number.isFinite(stat.topPercent)&&stat.topPercent>=0&&stat.topPercent<=100?[{code,...stat}]:[];}).sort((a,b)=>a.topPercent!-b.topPercent!||b.score-a.score||a.code.localeCompare(b.code));
  const bestScore=ranked[0];
  add(`${number(roster.length)}명의 니케들과\n함께했어요`,'',roster.find(g=>g.nikke.id==='privaty')??roster[0],['#127e79','#10232d']);

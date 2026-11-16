@@ -1,19 +1,19 @@
 {
   "OUR FIRST ENCOUNTER": {
     "colors": [
-      "#D51F2A",
-      "#09090B"
+      "#205782",
+      "#091727"
     ],
     "textColor": "#ffffff",
-    "accent": "#FFC3C7"
+    "accent": "#B8DFFF"
   },
   "STORY COMPLETE": {
     "colors": [
-      "#EF3340",
-      "#08080A"
+      "#111C2A",
+      "#040609"
     ],
     "textColor": "#ffffff",
-    "accent": "#FFC4C7"
+    "accent": "#A7BCD3"
   },
   "TOGETHER WITH NIKKE": {
     "colors": [

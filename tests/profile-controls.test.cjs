@@ -96,13 +96,13 @@ console.log('Passed: original recap copy, intro sequence, per-card colors and de
 
 // Restored recap cards use saved metadata; missing values never become invented counts.
 const {recapDate,recapStoryComplete}=load('src/recap-data.ts');
-const context={profile:{joinedAt:'20241115',normalCampaign:6048044,costumeCount:0},now:new Date('2026-11-16T03:00:00Z'),elementScores:{fire:{score:500,sampleCount:100,average:200,topPercent:8},water:{score:900,sampleCount:100,average:100,topPercent:20},iron:{score:1000,sampleCount:19,average:200,topPercent:1}}};
+const context={profile:{joinedAt:'20241115',normalCampaign:'50-36',costumeCount:0},now:new Date('2026-11-16T03:00:00Z'),elementScores:{fire:{score:500,sampleCount:100,average:200,topPercent:8},water:{score:900,sampleCount:100,average:100,topPercent:20},iron:{score:1000,sampleCount:19,average:200,topPercent:1}}};
 const restored=buildRecap(roster,'stable',context);
 const first=restored.find(c=>c.eyebrow==='OUR FIRST ENCOUNTER');assert(first.title.startsWith('마리안과 처음 만난 지'));assert(first.title.includes('731일'));assert.equal(first.image,'/assets/nikke/marian.webp');
 assert.equal(restored.find(c=>c.eyebrow==='STORY COMPLETE').image,'/assets/nikke/marian_queen.webp');
 assert(restored.find(c=>c.eyebrow==='MIMIR SCORE').title.includes('작열 속성 미미르 스코어'));assert(restored.find(c=>c.eyebrow==='FASHION COLLECTION').title.includes('0개'));assert.equal(restored.find(c=>c.eyebrow==='FASHION COLLECTION').image,'/assets/nikke/rupee.webp');
-for(const value of [6048044,'NORMAL 48-36',{chapter:48,stage:36},{id:6048044}])assert(recapStoryComplete(value));
-for(const value of [null,0,'48-35',{}])assert(!recapStoryComplete(value));
+for(const value of [6050044,'6050044',{id:6050044},'50-36','NORMAL 50-36',{chapter:50,stage:36},{chapter_id:50,stage_id:36}])assert(recapStoryComplete(value));
+for(const value of [null,0,'48-35','48-36','50-35',6048044,{id:6048044},{chapter:48,stage:36},{}])assert(!recapStoryComplete(value));
 for(const value of ['20241115','2024-11-15T00:00:00Z',1731628800,1731628800000,{seconds:1731628800},{_seconds:1731628800},{toDate:()=>new Date('2024-11-15T00:00:00Z')}])assert.equal(recapDate(value).toISOString().slice(0,10),'2024-11-15');
 for(const value of [null,'','bad','20240230'])assert.equal(recapDate(value),null);
 const missing=buildRecap(roster,'stable',{profile:{costumeCount:null},elementScores:{fire:{score:12,sampleCount:100,average:1,topPercent:null}}});assert(!missing.some(c=>['OUR FIRST ENCOUNTER','STORY COMPLETE','FASHION COLLECTION','MIMIR SCORE'].includes(c.eyebrow)));
