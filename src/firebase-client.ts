@@ -2,7 +2,7 @@ import {initializeApp} from 'firebase/app';
 import {firebaseConfig,firebaseDatabaseId,firebaseFunctionsBase} from './firebase-config';
 import {getAuth,GoogleAuthProvider,signInWithPopup,signOut,reauthenticateWithPopup,onAuthStateChanged} from 'firebase/auth';
 import {getFirestore,doc,getDoc,setDoc,updateDoc,collection,getDocs,query,orderBy,limit,startAfter,serverTimestamp,type QueryDocumentSnapshot} from 'firebase/firestore/lite';
-import type {AccountSession,AccountProfile} from '../shared/account';
+import type {AccountSession,AccountProfile,AccountUser,RawCharacter} from '../shared/account';
 import type {SharedDeckInput} from '../shared/decks';
 import {linkedIds,linkedAccount,savedProfile,savedBadges,savedDeck,legacyDeck,type LegacyRecord} from './firebase-mapping';
 
@@ -16,7 +16,12 @@ const profiles=new Map<string,AccountProfile>(),votes=new Map<string,number>();
 let scope='';
 function resetScope(){const uid=auth.currentUser?.uid??'';if(uid!==scope){scope=uid;userData={};commanders.clear();profiles.clear();votes.clear();}}
 export async function firebaseLogin(){try{const {user}=await signInWithPopup(auth,provider());const ref=doc(db,'users',user.uid);const existing=await getDoc(ref);if(!existing.exists())await setDoc(ref,{uid:user.uid,email:user.email,photoUrl:user.photoURL,provider:'google',displayName:user.displayName,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});}catch(e){throw friendly(e);}}
-export function watchFirebaseAuth(listener:()=>void){let initial=true;return onAuthStateChanged(auth,()=>{resetScope();if(initial){initial=false;return;}listener();});}
+export function watchFirebaseAuth(listener:(user:AccountUser|null)=>void){
+ return onAuthStateChanged(auth,user=>{
+  resetScope();
+  listener(user?{id:user.uid,nickname:user.displayName||'지휘관',email:user.email,picture:user.photoURL}:null);
+ });
+}
 function requireUser(){resetScope();const user=auth.currentUser;if(!user)throw Error('Google 계정으로 로그인해 주세요.');return user;}
 function friendly(error:unknown):Error{
  const code=(error as {code?:string})?.code;
@@ -39,17 +44,80 @@ async function session():Promise<AccountSession>{
  const ids=linkedIds(userData),selected=ids.includes(userData.selectedOpenId)?userData.selectedOpenId:ids.includes(userData.openId)?userData.openId:ids[0];
  // Reuse snapshots within the session; only explicit refresh collects game data.
  await Promise.all(ids.filter(id=>!commanders.has(id)).map(async id=>{const snapshot=await getDoc(doc(db,'commanders',id));if(auth.currentUser?.uid!==user.uid)throw Error('로그인 계정이 변경되었어요.');commanders.set(id,snapshot.data()??{});}));
- return {configured:true,user:{id:user.uid,nickname:String(userData.nickname||userData.displayName||user.displayName||'지휘관'),email:user.email,picture:user.photoURL},accounts:ids.map(id=>linkedAccount(id,commanders.get(id)!,selected))};
+ const accounts=ids.map(id=>linkedAccount(id,commanders.get(id)!,selected));
+ const commander=commanders.get(selected);
+ const commanderSummary=commander&&{nickname:commander.nickname||'지휘관 정보 없음',server:commander.server||'알 수 없음',commanderLevel:commander.commanderLevel,ownedNikkesCount:commander.ownedNikkesCount,synchroLevel:commander.synchroLevel};
+ return {configured:true,user:{id:user.uid,nickname:String(userData.nickname||userData.displayName||user.displayName||'지휘관'),email:user.email,picture:user.photoURL},accounts,commanderSummary};
 }
-async function profile(id:string,refresh=false):Promise<AccountProfile>{
- const state=await session(),account=state.accounts.find(a=>a.id===id);if(!account)throw Error('연동된 지휘관만 조회할 수 있어요.');
- if(refresh){await callFunction('scrapeNikkeProfile',{openId:id,refresh:true});commanders.delete(id);profiles.delete(id);await session();}
- // The manual saved-info action must see completed background score calculations.
-
+async function syncCommander(id:string,uid:string,initial:LegacyRecord,showGrowth?:(commander:LegacyRecord)=>void){
+ let stop:(()=>void)|undefined,finished=false,observed:LegacyRecord|undefined;
+ const publish=(commander:LegacyRecord)=>{
+  if(auth.currentUser?.uid!==uid||commander.scoreSyncId===initial.scoreSyncId||commander.scoreSyncId===observed?.scoreSyncId)return;
+  observed=commander;
+  showGrowth?.(commander);
+ };
+ // Watch the document committed by the existing sync function while it finishes scoring.
+ if(showGrowth)void import('firebase/firestore').then(({getFirestore,doc,onSnapshot})=>{
+  if(finished||auth.currentUser?.uid!==uid)return;
+  const ref=doc(getFirestore(app,firebaseDatabaseId),'commanders',id);
+  stop=onSnapshot(ref,{includeMetadataChanges:true},snapshot=>{
+   const commander=snapshot.data();
+   if(!finished&&!snapshot.metadata.fromCache&&typeof commander?.scoreSyncId==='string')publish(commander);
+  },()=>{/* The completed request falls back to a one-time read. */});
+ }).catch(()=>{});
+ try{
+  const response=await callFunction('scrapeNikkeProfile',{openId:id,refresh:true});
+  if(auth.currentUser?.uid!==uid)throw Error('로그인 계정이 변경되었어요.');
+  if(observed&&observed.scoreSyncId===response.data?.scoreSyncId)return observed;
+  const snapshot=await getDoc(doc(db,'commanders',id)),commander=snapshot.data();
+  if(!commander||auth.currentUser?.uid!==uid)throw Error('갱신된 지휘관 정보를 읽지 못했어요.');
+  publish(commander);
+  return commander;
+ }finally{
+  finished=true;
+  stop?.();
+ }
+}
+async function profile(id:string,refresh=false,onGrowth?:(profile:AccountProfile)=>void):Promise<AccountProfile>{
+ const user=requireUser();
+ if(!commanders.has(id))await session();
+ const ids=linkedIds(userData);
+ if(auth.currentUser?.uid!==user.uid||!ids.includes(id)||!commanders.has(id))throw Error('연동된 지휘관만 조회할 수 있어요.');
+ const selected=ids.includes(userData.selectedOpenId)?userData.selectedOpenId:ids.includes(userData.openId)?userData.openId:ids[0];
+ let commander=commanders.get(id)!;
+ if(refresh){
+  const showGrowth=onGrowth&&((data:LegacyRecord)=>{
+   commanders.set(id,data);
+   onGrowth(savedProfile(linkedAccount(id,data,selected),data,{status:'running'}));
+  });
+  commander=await syncCommander(id,user.uid,commander,showGrowth);
+  commanders.set(id,commander);
+ }
  const comparisonRequest=callFunction('getMimirScoreComparisons',{openId:id}).catch(error=>{console.warn('평균 스코어 조회:',error.message);return null;});
  let result:LegacyRecord;try{result=await callFunction('getNikkeScores',{openId:id});}catch(error){result={data:{status:'error',results:{}},scoreError:(error as Error).message};}
  const comparisons=await comparisonRequest;if(comparisons)result.data.comparisons=comparisons.data;
- const value=savedProfile({...account,...linkedAccount(id,commanders.get(id)!,account.selected?id:'')},commanders.get(id)!,result.data??{});if(auth.currentUser?.uid!==state.user?.id)throw Error('로그인 계정이 변경되었어요.');if(result.scoreError)value.scoreError=result.scoreError;profiles.set(id,value);return value;
+ if(auth.currentUser?.uid!==user.uid)throw Error('로그인 계정이 변경되었어요.');
+ if(refresh&&commander.scoreSyncId&&result.data?.syncId&&commander.scoreSyncId!==result.data.syncId){
+  const snapshot=await getDoc(doc(db,'commanders',id)),latest=snapshot.data();
+  if(auth.currentUser?.uid!==user.uid)throw Error('로그인 계정이 변경되었어요.');
+  if(!latest||latest.scoreSyncId!==result.data.syncId)throw Error('지휘관 정보가 다시 갱신됐어요. 저장된 정보를 다시 확인해 주세요.');
+  commander=latest;
+  commanders.set(id,commander);
+ }
+ const value=savedProfile(linkedAccount(id,commander,selected),commander,result.data??{});
+ if(result.scoreError)value.scoreError=result.scoreError;
+ if(!comparisons)value.comparisonUnavailable=true;
+ profiles.set(id,value);return value;
+}
+export async function refreshFirebaseProfile(id:string,onGrowth:(profile:AccountProfile)=>void){
+ try{await auth.authStateReady();return await profile(id,true,onGrowth);}
+ catch(error){throw friendly(error);}
+}
+export function firebaseCommanderCharacters(id:string):RawCharacter[]{
+ requireUser();
+ if(!linkedIds(userData).includes(id))return [];
+ const characters=commanders.get(id)?.characters;
+ return Array.isArray(characters)?characters:[];
 }
 
 // One ordered, cursor-paginated source shared by filters. No repeated whole-collection reads.

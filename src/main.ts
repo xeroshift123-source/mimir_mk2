@@ -9,7 +9,7 @@ import './legal.css';
 import './theme.css';
 import {mountThemeToggle} from './theme';
 import './style.css';
-import {accountReady,accountProfile,accountSession,showAccountDialog,isTestAccount,mountAccountPage} from './account-client';
+import {accountReady,accountProfile,accountSession,ensureAccountProfile,showAccountDialog,isTestAccount,mountAccountPage,usesFirebase} from './account-client';
 import './account.css';
 import './palette.css';
 import {mountHomeRaids} from './home-raids';
@@ -23,12 +23,15 @@ const icon = (name: string) => {
 };
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
- <header class="header"><a class="brand" href="#" aria-label="MIMIR 홈"><img class="brand-logo" src="/assets/mimir-logo.png" alt="" width="38" height="34"/><strong>MIMIR</strong></a><nav aria-label="주 메뉴"><a href="#" class="active">커맨드 센터</a><button data-builder>덱 빌더</button><button data-library>덱 라이브러리</button><button data-profile>내 니케</button><button data-account-page>내 정보</button><button data-entertainment>엔터테인먼트!</button></nav><div class="header-actions"><button class="theme-toggle" type="button" data-theme-toggle></button><button class="login" data-account-open>로그인 ${arrow}</button></div></header>
- <main><section class="hero"><div class="hero-copy"><h1>니케 덱 빌딩 도우미<br><em>MIMIR!</em></h1><p>흩어진 전투 정보를 하나로.<br>나의 니케를 이해하고, 더 나은 스쿼드를 완성하세요.</p><div class="hero-actions"><button class="primary" data-builder>덱 구성 시작하기 ${icon('arrow')}</button><button class="text-button" data-profile>내 니케 정보</button></div><section id="home-account-summary" aria-label="연동 지휘관 정보" hidden></section></div><div class="hero-art" aria-label="라피 레드 후드 캐릭터 아트"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="cross c1">+</div><div class="cross c2">+</div><span class="art-word">MIMIR</span><img src="/images/rapi_red_hood.webp" alt="라피 : 레드 후드" class="rapi"/><div class="art-label"><span class="tiny">FEATURED NIKKE / 001</span><strong>라피 : 레드 후드</strong><span>RAPI : RED HOOD <b>SSR</b></span></div><span class="art-coordinate">TACTICAL ARCHIVE — MIMIR</span></div></section>
+ <header class="header"><a class="brand" href="#" aria-label="MIMIR 홈"><img class="brand-logo" src="/assets/mimir-logo.png" alt="" width="38" height="34"/><strong>MIMIR</strong></a><nav aria-label="주 메뉴"><a href="#" class="active">커맨드 센터</a><button data-builder>덱 빌더</button><button data-library>덱 라이브러리</button><button data-profile>내 니케</button><button data-account-page>내 정보</button><button data-entertainment>엔터테인먼트!</button></nav><div class="header-actions"><button class="theme-toggle" type="button" data-theme-toggle></button><button class="login" type="button" data-account-open data-auth-pending disabled></button></div></header>
+ <main><section class="hero"><div class="hero-copy"><h1>니케 덱 빌딩 도우미<br><em>MIMIR!</em></h1><p>흩어진 전투 정보를 하나로.<br>나의 니케를 이해하고, 더 나은 스쿼드를 완성하세요.</p><div class="hero-actions"><button class="primary" data-builder>덱 구성 시작하기 ${icon('arrow')}</button><button class="text-button" data-profile>내 니케 정보</button>
+ <a class="text-button" href="https://dildoro.com" target="_blank" rel="noopener noreferrer">딜도로 바로가기 <span aria-hidden="true">↗</span></a>
+ <a class="text-button" href="https://soloraidhistory.vercel.app/" target="_blank" rel="noopener noreferrer">솔레 금서고 바로가기 <span aria-hidden="true">↗</span></a>
+ </div><section id="home-account-summary" aria-label="연동 지휘관 정보" hidden></section></div><div class="hero-art" aria-label="라피 레드 후드 캐릭터 아트"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="cross c1">+</div><div class="cross c2">+</div><span class="art-word">MIMIR</span><img src="/images/rapi_red_hood.webp" alt="라피 : 레드 후드" class="rapi"/><div class="art-label"><span class="tiny">FEATURED NIKKE / 001</span><strong>라피 : 레드 후드</strong><span>RAPI : RED HOOD <b>SSR</b></span></div><span class="art-coordinate">TACTICAL ARCHIVE — MIMIR</span></div></section>
  <section class="sync-strip"><div class="strip-icon">${icon('sync')}</div><div><h2>당신의 니케로 시작하세요.</h2><p>BLABLALINK 전투 정보를 연결하면, 내 육성에 맞춰 덱을 준비할 수 있어요.</p></div><button data-sync>전투 정보 동기화 ${arrow}</button></section>
  <section id="tools" class="tools"><div class="section-heading"><div><h2>미미르 도구</h2></div></div><div class="tool-grid"><button class="tool-card" data-builder><div class="card-top"><span class="tool-icon">${icon('grid')}</span><span class="card-no">01</span></div><h3>레이드 덱 빌더</h3><p>솔로·유니온 레이드 스쿼드를 편성하세요.</p><div class="mini-squad"><img src="/images/rapi_red_hood.webp" alt=""/><img src="/images/cinderella.webp" alt=""/><span>+</span><span>+</span><span>+</span></div></button><button class="tool-card" data-library><div class="card-top"><span class="tool-icon">${icon('layers')}</span><span class="card-no">02</span></div><h3>덱 라이브러리</h3><p>다른 지휘관의 덱을 찾아보고 공유하세요.</p></button><button class="tool-card" data-profile><div class="card-top"><span class="tool-icon">${icon('chart')}</span><span class="card-no">03</span></div><h3>내 니케 · 육성 분석</h3><p>니케 육성과 장비, 미미르 스코어를 확인하세요.</p></button><button class="tool-card" data-feature="계산기 · 시뮬레이터"><div class="card-top"><span class="tool-icon">${icon('calc')}</span><span class="card-no">04</span></div><h3>계산기 · 시뮬레이터</h3><p>버프와 오버로드 옵션을 비교해 보세요.</p></button></div></section>
  </main>
- <footer class="site-footer"><div class="footer-top"><a class="brand" href="#" aria-label="MIMIR 홈"><img class="brand-logo" src="/assets/mimir-logo.png" alt="" width="32" height="28"/><strong>MIMIR</strong></a><p>승리의 여신: 니케 비공식 팬 서비스</p><span class="prototype">로그인 전</span></div><nav class="footer-links" aria-label="서비스 안내"><a href="#/privacy">개인정보처리방침</a><a href="#/terms">이용약관</a><a href="#/contact">문의 및 제보</a></nav><p class="footer-disclaimer">개인이 비영리 목적으로 운영하는 팬 서비스입니다. 게임 관련 자산의 권리는 시프트업·Level Infinite 및 각 권리자에게 있으며, 공식 제휴를 의미하지 않습니다.</p><span class="footer-copyright">© 2026 MIMIR</span></footer>
+ <footer class="site-footer"><div class="footer-top"><a class="brand" href="#" aria-label="MIMIR 홈"><img class="brand-logo" src="/assets/mimir-logo.png" alt="" width="32" height="28"/><strong>MIMIR</strong></a><p>승리의 여신: 니케 비공식 팬 서비스</p><span class="prototype"></span></div><nav class="footer-links" aria-label="서비스 안내"><a href="#/privacy">개인정보처리방침</a><a href="#/terms">이용약관</a><a href="#/contact">문의 및 제보</a></nav><p class="footer-disclaimer">개인이 비영리 목적으로 운영하는 팬 서비스입니다. 게임 관련 자산의 권리는 시프트업·Level Infinite 및 각 권리자에게 있으며, 공식 제휴를 의미하지 않습니다.</p><span class="footer-copyright">© 2026 MIMIR</span></footer>
  <dialog id="modal"><div class="dialog-head"><span class="eyebrow">MIMIR</span><button class="close" aria-label="닫기">×</button></div><div id="modal-content"></div></dialog>`;
 
 mountThemeToggle();
@@ -47,13 +50,20 @@ document.addEventListener('mimir-sync',()=>showAccountDialog());
 function updateAccountHeader(){
  document.querySelector('#dev-account-notice')?.remove();
  if(accountSession.user&&isTestAccount()){const note=document.createElement('div');note.id='dev-account-notice';note.className='dev-account-notice';note.textContent='더미 계정 테스트 중 · 실제 로그인 및 계정 데이터가 아닙니다.';document.querySelector('.header')!.after(note);}
-const button=document.querySelector<HTMLElement>('[data-account-open]')!;button.replaceChildren();button.dataset.signedIn=String(!!accountSession.user);
+ const button=document.querySelector<HTMLButtonElement>('[data-account-open]')!;button.replaceChildren();button.dataset.signedIn=String(!!accountSession.user);delete button.dataset.authPending;button.disabled=false;
  if(accountSession.user){const ring=document.createElement('span');ring.className='header-avatar';ring.setAttribute('aria-hidden','true');const initial=document.createElement('span');initial.textContent=Array.from(accountSession.user.nickname.trim())[0]?.toUpperCase()??'M';ring.append(initial);button.append(ring);}
  else button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v16h-6M3 12h12m-5-5 5 5-5 5"/></svg><span>로그인</span>';
  button.title=accountSession.user?accountSession.user.nickname+' · 내 정보':'Google 로그인';button.setAttribute('aria-label',accountSession.user?accountSession.user.nickname+' 내 정보':'로그인');document.querySelector('.prototype')!.textContent=accountSession.user?'미미르 · 로그인됨':'미미르 · 로그인 전';}
-function updateHomeAccount(){const root=document.querySelector<HTMLElement>('#home-account-summary');if(!root)return;const p=accountProfile?.profile;root.hidden=!p;if(!p){root.replaceChildren();return;}root.replaceChildren();const heading=document.createElement('strong');heading.textContent=p.nickname+' · '+p.server+' 서버';root.append(heading);const list=document.createElement('dl');for(const [label,value] of [['지휘관 레벨',p.commanderLevel],['보유 니케',p.ownedNikkesCount],['싱크로 레벨',p.synchroLevel]]){const item=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=String(label);dd.textContent=typeof value==='number'?value.toLocaleString('ko-KR')+(label==='보유 니케'?'명':''):'—';item.append(dt,dd);list.append(item);}root.append(list);}
-void accountReady.then(()=>{updateAccountHeader();updateHomeAccount();});
-document.addEventListener('mimir-account-changed',()=>{updateAccountHeader();updateHomeAccount();if(location.hash==='#/my-nikke'||location.hash==='#/account'||location.hash==='#/entertainment')void route();});
+function updateHomeAccount(){const root=document.querySelector<HTMLElement>('#home-account-summary');if(!root)return;const p=accountProfile?.profile??accountSession.commanderSummary;root.hidden=!p;if(!p){root.replaceChildren();return;}root.replaceChildren();const heading=document.createElement('strong');heading.textContent=p.nickname+' · '+p.server+' 서버';root.append(heading);const list=document.createElement('dl');for(const [label,value] of [['지휘관 레벨',p.commanderLevel],['보유 니케',p.ownedNikkesCount],['싱크로 레벨',p.synchroLevel]]){const item=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=String(label);dd.textContent=typeof value==='number'?value.toLocaleString('ko-KR')+(label==='보유 니케'?'명':''):'—';item.append(dt,dd);list.append(item);}root.append(list);}
+function updateAccount(){
+ updateAccountHeader();
+ updateHomeAccount();
+ if(!usesFirebase&&accountSession.accounts.length&&!accountProfile)void ensureAccountProfile().then(updateHomeAccount);
+}
+document.addEventListener('mimir-account-auth-changed',updateAccountHeader);
+document.addEventListener('mimir-account-profile-changed',updateHomeAccount);
+void accountReady.then(updateAccount);
+document.addEventListener('mimir-account-changed',()=>{updateAccount();if(location.hash==='#/my-nikke'||location.hash==='#/account'||location.hash==='#/entertainment')void route();});
 document.querySelector('[data-account-page]')?.addEventListener('click',()=>{location.hash='/account';});
 document.querySelectorAll('[data-profile]').forEach(button=>button.addEventListener('click',()=>{location.hash='/my-nikke';}));
 document.querySelectorAll('[data-builder]').forEach(button=>button.addEventListener('click',()=>{location.hash=builderEntry();}));
@@ -115,7 +125,6 @@ async function route(){
   const {mountLegal}=await import('./legal');if(version===routeVersion)mountLegal(root,legal);
  }else if(profile){
   const root=document.createElement('main');root.id='my-nikke-root';root.innerHTML=`<p class="my-loading">${loadingMarkup("계정 정보를 불러오는 중…")}</p>`;homeMain.after(root);
-  await accountReady;if(version!==routeVersion)return;
   document.title='내 니케 정보 — MIMIR';
   const {mountMyNikke}=await import('./my-nikke');
   if(version===routeVersion)await mountMyNikke(root,()=>version===routeVersion);

@@ -8,7 +8,8 @@ import {demoGrowth,number,sumOptions,topOverloadOptions,collectionProgress,overl
 import type {Growth} from './profile-data';
 import {emptyProfileFilters,filterAndSortRoster,profileSorts,level40Cp} from './profile-controls';
 import {rosterControls,rosterGrid,portraitValue} from './profile-roster-ui';
-import {usesFirebase,accountProfile,accountSession,accountError,refreshAccount,readSavedAccount} from './account-client';
+import {usesFirebase,accountProfile,accountSession,accountError,currentProfileSnapshot,isAccountRefreshing,openAccountProfile,refreshAccount,readSavedAccount,scoreCalculationPending} from './account-client';
+import type {ProfileSnapshot} from './account-profile-cache';
 import {profileGrowth,validScore,researchIds} from './account-profile';
 import './my-nikke.css';
 
@@ -38,9 +39,21 @@ function equipmentOptionRows(eq:Growth['equipment'][number]){
 
 export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
  root.innerHTML=`<p class="my-loading">${loadingMarkup("니케 정보를 준비하는 중…")}</p>`;
- let catalog:Nikke[];try{const r=await fetch('/data/nikkes.json');if(!r.ok)throw Error();catalog=await r.json();}catch{if(isCurrent())root.innerHTML='<p class="my-loading">데이터를 불러오지 못했어요. 새로고침해 주세요.</p>';return;}
+ const load=openAccountProfile();
+ const catalogRequest=fetch('/data/nikkes.json').then(async response=>{
+  if(!response.ok)throw Error();
+  return await response.json() as Nikke[];
+ }).catch(()=>null);
+ const [loadedCatalog,initial]=await Promise.all([catalogRequest,load.initial]);
  if(!isCurrent())return;
- const account=accountProfile,parsed=account?profileGrowth(account,catalog):null;const roster=parsed?.roster??demoGrowth(catalog);const hasData=()=>demo||!!account;let demo=false,selected=roster[0]?.nikke.id??'',query='',sort='cp',tab='growth',filtersOpen=false,hideStats=false,view='list';let refreshing=false;let expandedScore:string|null=null;const filters=emptyProfileFilters();
+ if(!loadedCatalog){root.innerHTML='<p class="my-loading">데이터를 불러오지 못했어요. 새로고침해 주세요.</p>';return;}
+ const catalog=loadedCatalog;
+ const exampleRoster=()=>demoGrowth(catalog);
+ let snapshot=initial.snapshot,account=snapshot?.profile??null;
+ let roster=account?profileGrowth(account,catalog).roster:exampleRoster();
+ let checking=initial.cached,verified=!!account&&!initial.cached;
+ let profileNotice=initial.cached?'최신 정보 확인 중':account?.comparisonUnavailable?'비교 정보를 확인하지 못했어요.':'';
+ const hasData=()=>demo||!!account;let demo=false,selected=roster[0]?.nikke.id??'',query='',sort='cp',tab='growth',filtersOpen=false,hideStats=false,view='list';let expandedScore:string|null=null;const filters=emptyProfileFilters();
  root.innerHTML=`<section class="my-page"><div class="my-breadcrumb"><a href="#">커맨드 센터</a><span>/</span>내 니케</div><div class="my-heading"><div><div class="eyebrow">MY NIKKE / COMMANDER PROFILE</div><h1>내 니케 정보<span>육성의 모든 순간을, 한눈에.</span></h1></div></div><div id="my-mode"></div><p id="my-account-action-status" class="my-account-action-status" role="status"></p><div id="my-content"></div><dialog class="my-dialog" id="my-dialog"><button class="my-dialog-close" aria-label="닫기">×</button><h2>스코어 안내</h2><p>${account?'계정 동기화로 가져온 육성 정보와 서버에서 저장한 미미르 스코어를 표시합니다.':'예시 보기에서는 합성 육성 데이터와 예시 스코어를 사용합니다.'}</p><p>미미르 스코어는 동기화 후 서버에서 계산해 저장합니다. 점수·정책 버전·표본이 유효할 때만 평균과 상위 비율을 비교합니다.</p><p>40레벨 투력은 원본 보정식과 테이블로 계산합니다. ${account?'수집 정보가 부족하면 협투력을 표시하지 않습니다.':'예시 보기의 육성 데이터는 합성 예시입니다.'} 정보 누락은 0점으로 대체하지 않습니다.</p><button class="my-connect" data-my="close-info">확인</button></dialog></section>`;
  const content=root.querySelector<HTMLElement>('#my-content')!,dialog=root.querySelector<HTMLDialogElement>('#my-dialog')!;
  // Use the roster's actual width: the adjacent detail panel also affects available space.
@@ -51,7 +64,8 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
   const narrow=(observedRoster?.clientWidth??minimumListWidth)<minimumListWidth;
   if(narrow!==automaticGrid){automaticGrid=narrow;renderRoster();}
  });
- const removalObserver=new MutationObserver(()=>{if(!root.isConnected){rosterResize.disconnect();removalObserver.disconnect();}});
+ const profileEvents=new AbortController();
+ const removalObserver=new MutationObserver(()=>{if(!root.isConnected){profileEvents.abort();rosterResize.disconnect();removalObserver.disconnect();}});
  removalObserver.observe(root.parentNode??document.body,{childList:true});
  const profilePage=root.querySelector<HTMLElement>('.my-page')!;
  // One content-width decision drives both the layout and detail-sheet behavior.
@@ -88,6 +102,9 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
   }).join(''):'<p class="score-breakdown-empty">이 속성의 비교 통계가 아직 없어요.</p>')+'</div>';
  }
  function scoreChart(){
+  if(!demo&&account?.scoreError)return `<p class="my-summary-note" role="status">${esc(account.scoreError)}</p>`;
+  if(!demo&&scoreCalculationPending(account))return loadingMarkup('미미르 스코어 계산 중…');
+  if(!demo&&account?.scoreStatus==='failed')return '<p class="my-summary-note" role="status">미미르 스코어를 계산하지 못했어요.</p>';
   const examples=[7.5,24,48,89,65];
   const scores=Object.entries(elements).map(([code,label],index)=>{
    const values=demo?roster.filter(g=>g.nikke.element===code&&g.score!==null).map(g=>g.score!):[];
@@ -104,20 +121,64 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
   }).join('')+'</div>';
 
  }
- function render(){
-  if(detailSheet.open){detailSheet.close();restoreDetail();}
+ function updateFreshness(){
+  const target=root.querySelector<HTMLElement>('[data-profile-freshness]');
+  if(target&&snapshot){
+   const date=new Date(snapshot.checkedAt).toLocaleString('ko-KR');
+   target.textContent='최근 조회 '+date+(profileNotice?' · '+profileNotice:'');
+  }
+  const refresh=root.querySelector<HTMLButtonElement>('[data-my="refresh-account"]');
+  if(refresh){
+   const refreshing=isAccountRefreshing();
+   const label=refreshing?(scoreCalculationPending(account)?'스코어 계산 중':'갱신 중'):'갱신';
+   refresh.disabled=refreshing||!verified||checking;
+   refresh.classList.toggle('is-refreshing',refreshing);
+   refresh.setAttribute('aria-label',refreshing?label:'정보 갱신');
+   refresh.setAttribute('aria-busy',String(refreshing));
+   refresh.querySelector('span')!.textContent=label;
+  }
+ }
+ function showSnapshot(next:ProfileSnapshot|null){
+  if(!isCurrent())return;
+  const keepSheet=detailSheet.open&&!!next&&account?.account.id===next.profile.account.id;
+  const detailScroll=root.querySelector('#my-detail')?.scrollTop??0;
+  const search=root.querySelector<HTMLInputElement>('#my-search');
+  const caret=search===document.activeElement?[search?.selectionStart,search?.selectionEnd] as const:null;
+  snapshot=next;
+  account=next?.profile??null;
+  roster=account?profileGrowth(account,catalog).roster:exampleRoster();
+  if(account)demo=false;
+  if(!roster.some(g=>g.nikke.id===selected))selected=roster[0]?.nikke.id??'';
+  render(keepSheet);
+  const detail=root.querySelector<HTMLElement>('#my-detail');
+  if(detail)detail.scrollTop=detailScroll;
+  if(caret){
+   const nextSearch=root.querySelector<HTMLInputElement>('#my-search');
+   nextSearch?.focus({preventScroll:true});
+   if(caret[0]!=null&&caret[1]!=null)nextSearch?.setSelectionRange(caret[0],caret[1]);
+  }
+ }
+ function render(keepSheet=false){
+  if(keepSheet)detailSheet.querySelector('.mobile-sheet-body')!.replaceChildren();
+  else if(detailSheet.open){detailSheet.close();restoreDetail();}
+  const refreshing=isAccountRefreshing();
   root.querySelector('#my-mode')!.innerHTML=demo?`<div class="my-demo"><div>${icon('info')}<span><strong>예시 계정 미리보기</strong> 실제 계정 연동 전 · 모든 수치는 화면 확인용 예시입니다.</span></div><button data-my="empty">예시 닫기 ×</button></div>`:'';
+  if(!hasData()&&checking){content.innerHTML=loadingMarkup('선택된 지휘관 정보를 불러오는 중…');return;}
   if(!hasData()){content.innerHTML=`<section class="my-empty"><span class="my-empty-icon">${icon('user')}</span><h2>당신의 니케를 만나볼까요?</h2><p>BLABLALINK 전투 정보를 연결하면<br>보유 니케와 육성 정보를 한곳에서 확인할 수 있어요.</p><button class="my-connect" data-my="connect">${icon('sync')} 계정 연결하기</button><button class="my-text-button" data-my="demo">먼저 예시 화면 둘러보기</button><small>${esc(accountError||(!accountSession.configured?'OCI 서버와 Google 로그인 설정을 준비 중입니다.':'로그인 후 BLABLALINK 계정을 연결해 주세요.'))}</small></section>`;return;}
   const consoleLevels=demo?demoResearch:researchIds.map(([id,label])=>[label,String(account?.profile.recycleRoom.find(r=>r.tid===id)?.lv??'—')]);
   const consoleIcons=['reenergy.png','attacker-mono.webp','defender-mono.webp','supporter-mono.webp','elysion-mono.webp','missilis-mono.webp','tetra-mono.webp','pilgrim-mono.webp','abnormal-mono.webp'];
   const consoleMarkup=`<div class="commander-console">${icon('cube')}<div class="console-heading"><span>콘솔</span><details class="console-details"><summary aria-label="상세 콘솔 레벨 보기">${icon('plus')}</summary><div class="console-popover"><span class="console-popover-title">콘솔 레벨${demo?' · 예시':''}</span><dl>${consoleLevels.map(([label,value],i)=>`<div><dt>${i?`<img class="console-symbol" src="/assets/icons/console/${consoleIcons[i]}" alt="${label}" title="${label}"/>`:'공통 연구'}</dt><dd><small>Lv</small>${value}</dd></div>`).join('')}</dl></div></details></div><div class="console-common"><span class="console-common-label">공통 연구</span><strong><small>Lv</small> ${consoleLevels[0][1]}</strong></div></div>`;
-  content.innerHTML=`<section class="commander-summary" aria-label="계정 요약"><div class="commander-identity"><div class="commander-avatar">M<span>02</span></div><div><div class="commander-name"><h2>${esc(account?.profile.nickname??'MIMIR 지휘관')}</h2><span>${demo?'DEMO':'CONNECTED'}</span>${demo?'':`<button class="commander-refresh ${refreshing?'is-refreshing':''}" data-my="refresh-account" aria-label="${refreshing?'정보 갱신 중':'정보 갱신'}" aria-busy="${refreshing}" ${refreshing?'disabled':''}>${icon('sync')}<span>${refreshing?'갱신 중':'갱신'}</span></button>`}</div><p><span>${esc(account?.profile.server??'한국')} 서버</span><i>·</i><span>${esc(account?.profile.union??'MIMIR UNION')}</span></p><div class="commander-freshness">${icon('clock')} ${demo?'예시 데이터 · 실제 동기화 기록 없음':`<span>마지막 갱신 ${esc(new Date(account!.account.updatedAt).toLocaleString('ko-KR'))}</span>`}</div></div></div><div class="commander-metrics">${consoleMarkup}<div>${icon('level')}<span>싱크로 레벨</span><strong>${number(account?.profile.synchroLevel??400)}</strong></div><div>${icon('group')}<span>보유 니케 <small>${demo?'예시':''}</small></span><strong>${account?.profile.ownedNikkesCount??roster.length}<small>명</small></strong></div></div></section><section class="element-score-section" aria-label="속성별 스코어"><div class="my-section-label"><h2>속성별 미미르 스코어 <span>${demo?'표시 예시':'저장 점수'}</span></h2><button data-my="info" aria-label="미미르 스코어 안내">${icon('info')}</button></div>${scoreChart()}<p class="my-summary-note">${demo?'점수·순위는 합성 예시이며 실제 전체 유저 통계가 아닙니다.':'미미르에 저장된 동일 정책·계산 버전의 계정과 비교합니다. 막대가 길수록 상위이며, 유효 표본 20개 미만은 비교 대기입니다.'}</p></section><div class="my-layout"><section class="my-roster" aria-label="보유 니케 목록"><div class="my-roster-heading"><h2>니케 목록 <span>${roster.length}</span></h2><div class="my-view-switch" role="group" aria-label="목록 보기 방식"><button data-view="list" aria-pressed="${view==='list'}" title="리스트 뷰">☰ <span>목록</span></button><button data-view="grid" aria-pressed="${view==='grid'}" title="그리드 뷰">▦ <span>그리드</span></button></div></div><div class="roster-search-toolbar"><div class="my-search">${icon('search')}<input id="my-search" type="search" placeholder="니케 이름 검색…" aria-label="내 니케 검색" value="${esc(query)}" autocomplete="off"/></div><button class="roster-icon-button roster-filter-button" data-my="filters" title="필터" aria-label="필터" aria-expanded="${filtersOpen}" aria-controls="profile-filters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button></div>${rosterControls(filters,filtersOpen,hideStats,sort)}<div id="my-roster-items"></div></section><section class="my-detail" aria-label="선택한 니케 상세" id="my-detail"></section></div>`;
+  content.innerHTML=`<section class="commander-summary" aria-label="계정 요약"><div class="commander-identity"><div class="commander-avatar">M<span>02</span></div><div><div class="commander-name"><h2>${esc(account?.profile.nickname??'MIMIR 지휘관')}</h2><span>${demo?'DEMO':'CONNECTED'}</span>${demo?'':`<button class="commander-refresh ${refreshing?'is-refreshing':''}" data-my="refresh-account" aria-label="${refreshing?'정보 갱신 중':'정보 갱신'}" aria-busy="${refreshing}" ${refreshing?'disabled':''}>${icon('sync')}<span>${refreshing?'갱신 중':'갱신'}</span></button>`}</div><p><span>${esc(account?.profile.server??'한국')} 서버</span><i>·</i><span>${esc(account?.profile.union??'MIMIR UNION')}</span></p><div class="commander-freshness">${icon('clock')} ${demo?'예시 데이터 · 실제 동기화 기록 없음':`<span>마지막 갱신 ${esc(new Date(account!.account.updatedAt).toLocaleString('ko-KR'))}</span>`}</div>${demo?'':'<div class="commander-freshness" data-profile-freshness role="status"></div>'}</div></div><div class="commander-metrics">${consoleMarkup}<div>${icon('level')}<span>싱크로 레벨</span><strong>${number(account?.profile.synchroLevel??400)}</strong></div><div>${icon('group')}<span>보유 니케 <small>${demo?'예시':''}</small></span><strong>${account?.profile.ownedNikkesCount??roster.length}<small>명</small></strong></div></div></section><section class="element-score-section" aria-label="속성별 스코어"><div class="my-section-label"><h2>속성별 미미르 스코어 <span>${demo?'표시 예시':'저장 점수'}</span></h2><button data-my="info" aria-label="미미르 스코어 안내">${icon('info')}</button></div>${scoreChart()}<p class="my-summary-note">${demo?'점수·순위는 합성 예시이며 실제 전체 유저 통계가 아닙니다.':'미미르에 저장된 동일 정책·계산 버전의 계정과 비교합니다. 막대가 길수록 상위이며, 유효 표본 20개 미만은 비교 대기입니다.'}</p></section><div class="my-layout"><section class="my-roster" aria-label="보유 니케 목록"><div class="my-roster-heading"><h2>니케 목록 <span>${roster.length}</span></h2><div class="my-view-switch" role="group" aria-label="목록 보기 방식"><button data-view="list" aria-pressed="${view==='list'}" title="리스트 뷰">☰ <span>목록</span></button><button data-view="grid" aria-pressed="${view==='grid'}" title="그리드 뷰">▦ <span>그리드</span></button></div></div><div class="roster-search-toolbar"><div class="my-search">${icon('search')}<input id="my-search" type="search" placeholder="니케 이름 검색…" aria-label="내 니케 검색" value="${esc(query)}" autocomplete="off"/></div><button class="roster-icon-button roster-filter-button" data-my="filters" title="필터" aria-label="필터" aria-expanded="${filtersOpen}" aria-controls="profile-filters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg></button></div>${rosterControls(filters,filtersOpen,hideStats,sort)}<div id="my-roster-items"></div></section><section class="my-detail" aria-label="선택한 니케 상세" id="my-detail"></section></div>`;
   const consoleDetails=root.querySelector<HTMLDetailsElement>('.console-details')!;
   consoleDetails.addEventListener('mouseenter',()=>{consoleDetails.open=true;});
   consoleDetails.addEventListener('mouseleave',()=>{if(!consoleDetails.contains(document.activeElement))consoleDetails.open=false;});
   consoleDetails.addEventListener('focusout',event=>{if(!consoleDetails.contains(event.relatedTarget as Node|null))consoleDetails.open=false;});
   consoleDetails.addEventListener('keydown',event=>{if(event.key==='Escape'){consoleDetails.open=false;consoleDetails.querySelector('summary')?.blur();}});
-  root.querySelector<HTMLSelectElement>('#my-sort')!.value=sort;renderRoster();renderDetail();
+  root.querySelector<HTMLSelectElement>('#my-sort')!.value=sort;renderRoster();renderDetail();updateFreshness();
+  if(keepSheet){
+   detailSheet.querySelector('.mobile-sheet-body')!.append(root.querySelector('#my-detail')!);
+   sheetTrigger=root.querySelector<HTMLElement>(`[data-nikke="${CSS.escape(selected)}"]`);
+  }
  }
  function filtered(){return filterAndSortRoster(roster,query,filters,sort);}
  function renderRoster(){
@@ -142,7 +203,13 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
  function renderDetail(){
   if(!hasData())return;if(!filtered().length){root.querySelector('#my-detail')!.innerHTML='<div class="my-no-results">조건에 맞는 니케가 없어요. 필터를 변경해 주세요.</div>';return;}const g=roster.find(n=>n.nikke.id===selected)!;const n=g.nikke;const coopCp=level40Cp(g);
   root.querySelector('#my-detail')!.innerHTML=`<div class="detail-character"><div class="detail-portrait"><img src="/${n.imageUrl}" alt="${esc(n.name)}"/><div class="detail-portrait-fade"></div></div><div class="detail-heading"><span class="detail-company">${company[n.company]??n.company}<i>/</i>${roles[n.type]??n.type}</span><h2>${esc(n.name)}</h2><div class="detail-nikke-badges"><span class="detail-symbol-badge" title="${elements[n.element]}" aria-label="${elements[n.element]}"><img src="${elementIcon(n)}" alt=""/></span><span class="detail-symbol-badge" title="버스트 ${n.burst==='0'?'ALL':n.burst}" aria-label="버스트 ${n.burst==='0'?'ALL':n.burst}"><img src="${burstIcon(n)}" alt=""/></span><span class="detail-weapon-badge">${n.weaponType}</span><span class="detail-symbol-badge" title="${esc(company[n.company]??n.company)}" aria-label="${esc(company[n.company]??n.company)}"><img class="detail-mono-symbol" src="/assets/icons/console/${n.company.toLowerCase()}-mono.webp" alt=""/></span><span class="detail-symbol-badge" title="${esc(roles[n.type]??n.type)}" aria-label="${esc(roles[n.type]??n.type)}"><img class="detail-mono-symbol" src="/assets/icons/console/${({ATK:'attacker',DEF:'defender',SUP:'supporter'} as Record<string,string>)[n.type]}-mono.webp" alt=""/></span></div></div></div><div class="detail-basic-metrics"><div><span>레벨</span><strong>${g.level}</strong></div><div><span>코어 강화</span><strong>+${g.core}</strong></div><div><span>호감도</span><strong>${g.bond}</strong></div><div><span>저장 전투력</span><strong>${number(g.cp)}</strong></div></div><section class="detail-coop" aria-label="40레벨 전투력"><div class="detail-coop-main"><div><span>40레벨 전투력 <small>협투력</small></span><strong>${number(coopCp)}</strong></div><button data-my="license" ${coopCp===null?'disabled':''}>면허증 발급 ${icon('arrow')}</button></div><p>${coopCp===null?'4부위 오버로드와 육성 정보가 필요해요.':'협동작전 Lv.40 기준 · 큐브 Lv.15 가정'}</p></section><div class="detail-tabs" role="tablist" aria-label="니케 상세 항목">${[['statistics','육성 통계'],['growth','육성 정보'],['equipment','장비·오버로드'],['score','스코어']].map(([key,label])=>`<button role="tab" id="detail-tab-${key}" data-tab="${key}" aria-selected="${tab===key}" aria-controls="detail-tab-panel" tabindex="${tab===key?0:-1}">${label}</button>`).join('')}</div><div class="detail-tab-panel" id="detail-tab-panel" role="tabpanel" aria-labelledby="detail-tab-${tab}" tabindex="0">${tabContent(g)}</div><p class="detail-data-note">${icon('info')} ${g.isDemo?'모든 육성 수치는 예시입니다. 실제 계정 연동 전.':'동기화된 육성 정보 · 협투력은 40레벨 보정값입니다.'}</p>`;
-  if(tab==='statistics'&&!g.isDemo&&account&&n.blablaNameCode){const target=root.querySelector<HTMLElement>('[data-saved-statistics]');if(target){if(usesFirebase)void import('./firebase-statistics').then(m=>m.mountSavedStatistics(target,account.account.id,n.blablaNameCode!));else target.textContent='육성 통계 연결을 준비 중이에요.';}}
+  if(tab==='statistics'&&!g.isDemo&&account&&n.blablaNameCode){
+   const target=root.querySelector<HTMLElement>('[data-saved-statistics]'),openId=account.account.id,code=n.blablaNameCode;
+   if(target){
+    if(usesFirebase&&accountProfile?.account.id===openId)void import('./firebase-statistics').then(m=>{if(target.isConnected)m.mountSavedStatistics(target,openId,code);});
+    else target.textContent=checking?'계정 정보를 확인하고 있어요.':'육성 통계를 불러오지 못했어요.';
+   }
+  }
 
  }
  function tabContent(g:Growth){
@@ -150,6 +217,8 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
   if(tab==='equipment')return `<div class="detail-section-title"><h3>오버로드 합계</h3><span>${g.equipment.length}부위 합산</span></div><dl class="overload-sums">${sumOptions(g).map(o=>`<div class="overload-option ${overloadColorClass(o.maxTier)}" title="최고 옵션 Lv.${o.maxTier||'—'} 기준 색상"><dt>${o.name} <small>(${o.count})</small></dt><dd>+${number(o.value,2)}%</dd></div>`).join('')}</dl><div class="detail-section-title"><h3>장비 & 오버로드</h3><button class="profile-sim-launch" data-my="simulator">모듈작 시뮬레이터</button></div><div class="my-equipment-list">${g.equipment.map(eq=>`<details open><summary><span class="equipment-part">${icon('shield')}</span><strong>${eq.name} 장비</strong><span>${(eq.tier??0)>=10?'오버로드':'Tier '+(eq.tier??'—')} <b>Lv.${eq.level}</b></span><small>＋</small></summary><div class="equipment-item-name ${(eq.tier??(eq.options.length?10:9))>=10?'equipment-overloaded':'equipment-standard'}">${esc(eq.label??eq.name+' 장비')} (+${eq.level})</div><dl>${equipmentOptionRows(eq)}</dl></details>`).join('')}</div>`;
   if(tab==='score'){
    if(account?.scoreError)return `<p role="status">${esc(account.scoreError)}</p>`;
+   if(!g.isDemo&&scoreCalculationPending(account))return loadingMarkup('미미르 스코어 계산 중…');
+   if(!g.isDemo&&account?.scoreStatus==='failed')return '<p role="status">미미르 스코어를 계산하지 못했어요.</p>';
    const demoIndex=roster.filter(row=>row.nikke.element===g.nikke.element).findIndex(row=>row.nikke.id===g.nikke.id);
    const comparison=account?.nikkeComparisons?.[g.nikke.blablaNameCode??''];
    const top=g.isDemo?(g.score===null?null:[12,42,67,85][Math.max(0,demoIndex)%4]):comparison?.topPercent??g.scoreDetails?.topPercent??null;
@@ -169,13 +238,51 @@ export async function mountMyNikke(root:HTMLElement,isCurrent:()=>boolean){
    root.querySelectorAll<HTMLElement>('.score-breakdown').forEach(panel=>{const open=panel.id==='score-breakdown-'+expandedScore;panel.classList.toggle('is-open',open);panel.inert=!open;});
   }
   if(b.dataset.view){view=b.dataset.view;render();}
-  switch(b.dataset.my){case 'simulator':{const g=roster.find(n=>n.nikke.id===selected);if(g)void import('./overload-simulator').then(({showSimulator})=>{if(isCurrent())showSimulator(g,isCurrent);});break;}case 'license':{const g=roster.find(n=>n.nikke.id===selected);if(g&&level40Cp(g)!==null)void import('./nikke-license').then(({showLicense})=>{if(isCurrent())return showLicense(g,isCurrent);});break;}case 'refresh-account':{if(refreshing)break;refreshing=true;root.querySelector('#my-account-action-status')!.textContent='';render();void refreshAccount().catch(error=>{if(isCurrent()&&root.isConnected)root.querySelector('#my-account-action-status')!.textContent=error.message;}).finally(()=>{refreshing=false;if(isCurrent()&&root.isConnected){const button=root.querySelector<HTMLButtonElement>('[data-my="refresh-account"]');if(button){button.disabled=false;button.classList.remove('is-refreshing');button.setAttribute('aria-label','정보 갱신');button.setAttribute('aria-busy','false');button.querySelector('span')!.textContent='갱신';}}});break;}case 'read-scores':{b.disabled=true;b.dataset.loading='true';void readSavedAccount().catch(error=>{b.disabled=false;b.textContent=error.message;});break;}case 'empty':demo=false;render();break;case 'demo':demo=true;render();break;case 'connect':connect();break;case 'info':dialog.showModal();break;case 'close-info':dialog.close();break;case 'filters':filtersOpen=!filtersOpen;render();root.querySelector<HTMLElement>('.roster-filter-button')?.focus({preventScroll:true});break;case 'reset':query='';Object.values(filters).forEach(set=>set.clear());sort='cp';render();break;}
+  switch(b.dataset.my){case 'simulator':{const g=roster.find(n=>n.nikke.id===selected);if(g)void import('./overload-simulator').then(({showSimulator})=>{if(isCurrent())showSimulator(g,isCurrent);});break;}case 'license':{const g=roster.find(n=>n.nikke.id===selected);if(g&&level40Cp(g)!==null)void import('./nikke-license').then(({showLicense})=>{if(isCurrent())return showLicense(g,isCurrent);});break;}case 'refresh-account':{
+  if(isAccountRefreshing())break;
+  const status=root.querySelector<HTMLElement>('#my-account-action-status')!;
+  status.textContent='';
+  void refreshAccount().catch(error=>{if(isCurrent())status.textContent=error.message;});
+  break;
+ }case 'read-scores':{b.disabled=true;b.dataset.loading='true';void readSavedAccount().catch(error=>{b.disabled=false;b.textContent=error.message;});break;}case 'empty':demo=false;render();break;case 'demo':demo=true;render();break;case 'connect':connect();break;case 'info':dialog.showModal();break;case 'close-info':dialog.close();break;case 'filters':filtersOpen=!filtersOpen;render();root.querySelector<HTMLElement>('.roster-filter-button')?.focus({preventScroll:true});break;case 'reset':query='';Object.values(filters).forEach(set=>set.clear());sort='cp';render();break;}
  });
  root.querySelector('.my-dialog-close')!.addEventListener('click',()=>dialog.close());
  root.addEventListener('input',e=>{const input=e.target as HTMLInputElement;if(input.id==='my-search'){query=input.value;renderRoster();}});
  root.addEventListener('change',e=>{const input=e.target as HTMLSelectElement;if(input.id==='my-sort'){sort=input.value;render();}if(input.id==='profile-hide-stats'){hideStats=(input as unknown as HTMLInputElement).checked;renderRoster();}});
  root.addEventListener('keydown',e=>{const target=e.target as HTMLElement;if(target.getAttribute('role')!=='tab'||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const tabs=['statistics','growth','equipment','score'];const current=tabs.indexOf(tab);tab=e.key==='Home'?tabs[0]:e.key==='End'?tabs[tabs.length-1]:tabs[(current+(e.key==='ArrowRight'?1:tabs.length-1))%tabs.length];renderDetail();root.querySelector<HTMLElement>(`#detail-tab-${tab}`)!.focus({preventScroll:true});});
  render();
+ const onProfileChanged=(latest:ProfileSnapshot|null)=>{
+  if(!isCurrent())return;
+  if(latest&&latest.profile!==account){
+   checking=false;
+   verified=true;
+   profileNotice=latest.profile.comparisonUnavailable?'비교 정보를 확인하지 못했어요.':'';
+   showSnapshot(latest);
+  }else updateFreshness();
+ };
+ document.addEventListener('mimir-account-profile-changed',event=>onProfileChanged((event as CustomEvent<ProfileSnapshot|null>).detail),{signal:profileEvents.signal});
+ if(isAccountRefreshing())onProfileChanged(currentProfileSnapshot());
+ if(initial.cached){
+  void load.selection.then(id=>{
+   if(!isCurrent()||!checking||id===undefined)return;
+   verified=!!account&&id===account.account.id;
+   if(!verified)showSnapshot(null);
+  });
+  void load.latest.then(latest=>{
+   if(!isCurrent()||!checking)return;
+   checking=false;
+   const incomplete=!!(latest?.profile.scoreError||latest?.profile.comparisonUnavailable);
+   if(account&&(!latest||(incomplete&&account.account.id===latest.profile.account.id))){
+    profileNotice='최신 정보를 확인하지 못해 저장된 정보를 표시 중';
+    updateFreshness();
+    if(tab==='statistics'&&!demo)renderDetail();
+    return;
+   }
+   verified=!!latest;
+   profileNotice=incomplete?'일부 최신 정보를 확인하지 못했어요.':'';
+   showSnapshot(latest);
+  });
+ }
 }
 
 

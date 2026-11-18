@@ -1,23 +1,230 @@
 import {loadingMarkup} from './loading';
-import type {AccountSession,AccountProfile} from '../shared/account';
+import {clearProfileCache,pruneProfileCache,readProfileCache,writeProfileCache,type ProfileSnapshot} from './account-profile-cache';
+import type {AccountSession,AccountProfile,AccountUser} from '../shared/account';
 export let accountSession:AccountSession={configured:false,user:null,accounts:[]};
 export let accountProfile:AccountProfile|null=null;
 export let accountError='';
-export const isTestAccount=()=>import.meta.env.DEV&&sessionStorage.getItem('mimir-dev-account')==='1';
+let accountAuthPending=true;
+export function isTestAccount(){
+ try{return import.meta.env.DEV&&sessionStorage.getItem('mimir-dev-account')==='1';}
+ catch{return false;}
+}
 export const usesFirebase=import.meta.env.VITE_ACCOUNT_BACKEND!=='oci';
 export async function api<T>(path:string,body?:unknown):Promise<T>{if(isTestAccount())return (await (await import('./dev-account')).devApi(path,body)) as T;if(usesFirebase)return (await (await import('./firebase-client')).firebaseApi(path,body)) as T;let response:Response;try{response=await fetch('/api'+path,{method:body===undefined?'GET':'POST',credentials:'same-origin',signal:AbortSignal.timeout(body===undefined?20000:180000),headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});}catch{throw Error('계정 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.');}let data;try{data=await response.json();}catch{throw Error('계정 서버에 연결하지 못했어요. 서버 실행 상태를 확인해 주세요.');}if(!response.ok)throw Error(data.error??'요청을 처리하지 못했어요.');return data as T;}
 function changed(){document.dispatchEvent(new CustomEvent('mimir-account-changed'));}
 let sessionRevision=0;
-export async function loadSession(notify=true){const revision=++sessionRevision;try{const session=await api<AccountSession>('/session');if(typeof session.configured!=='boolean'||!Array.isArray(session.accounts))throw Error('계정 서버 응답을 확인할 수 없어요.');const selected=session.accounts.find(a=>a.selected)??session.accounts[0];const profile=selected?await api<AccountProfile>('/accounts/'+encodeURIComponent(selected.id)):null;if(revision!==sessionRevision)return;accountSession=session;accountProfile=profile;accountError='';}catch(error){if(revision!==sessionRevision)return;accountError=error instanceof Error?error.message:'계정 정보를 불러오지 못했어요.';accountProfile=null;}if(notify)changed();}
-export const accountReady=loadSession(false);
-if(usesFirebase)void accountReady.then(async()=>{const {watchFirebaseAuth}=await import('./firebase-client');watchFirebaseAuth(()=>{if(!isTestAccount())void loadSession();});});
+let sessionVerified=false;
+let profileCheckedAt=0;
+let profileReadVersion=0;
+let profileRequest:Promise<AccountProfile|null>|undefined;
+let refreshRequest:Promise<void>|undefined;
+export const isAccountRefreshing=()=>!!refreshRequest;
+export const scoreCalculationPending=(profile:AccountProfile|null|undefined)=>profile?.scoreStatus==='pending'||profile?.scoreStatus==='running';
+const selectedAccount=(session:AccountSession)=>session.accounts.find(a=>a.selected)??session.accounts[0];
+function authResolved(){
+ accountAuthPending=false;
+ document.dispatchEvent(new Event('mimir-account-auth-changed'));
+}
+async function readSession(revision:number,notify:boolean){
+ if(revision!==sessionRevision)return;
+ try{
+  const session=await api<AccountSession>('/session');
+  if(revision!==sessionRevision)return;
+  if(typeof session.configured!=='boolean'||!Array.isArray(session.accounts))throw Error('계정 서버 응답을 확인할 수 없어요.');
+  if(accountSession.user?.id!==session.user?.id||accountProfile?.account.id!==selectedAccount(session)?.id)accountProfile=null;
+  accountSession=session;
+  sessionVerified=true;
+  accountError='';
+ }catch(error){
+  if(revision!==sessionRevision)return;
+  accountError=error instanceof Error?error.message:'계정 정보를 불러오지 못했어요.';
+ }
+ if(accountAuthPending)authResolved();
+ if(notify)changed();
+}
+export function loadSession(){
+ accountProfile=null;
+ sessionVerified=false;
+ profileRequest=undefined;
+ refreshRequest=undefined;
+ return accountReady=readSession(++sessionRevision,true);
+}
+async function observeFirebaseAuth(){
+ try{
+  const {watchFirebaseAuth}=await import('./firebase-client');
+  await new Promise<void>(resolve=>{
+   let initial=true;
+   watchFirebaseAuth(user=>{
+    if(!isTestAccount()&&(accountAuthPending||accountSession.user?.id!==user?.id)){
+     const previousUserId=accountSession.user?.id;
+     if(previousUserId)void clearProfileCache(previousUserId);
+     accountSession={configured:true,user,accounts:[]};
+     accountProfile=null;
+     accountError='';
+     if(!initial)void loadSession();
+     authResolved();
+     if(!initial)changed();
+    }
+    initial=false;
+    resolve();
+   });
+  });
+ }catch{/* The session request reports Firebase initialization errors. */}
+}
+const restoreFirebase=usesFirebase&&!isTestAccount();
+const restoredAuth=restoreFirebase?observeFirebaseAuth():Promise.resolve();
+export let accountReady=restoredAuth.then(()=>readSession(0,false));
+if(usesFirebase&&!restoreFirebase)void accountReady.then(observeFirebaseAuth);
+export async function waitForAccountAuth(){
+ if(!accountAuthPending)return;
+ await restoredAuth;
+ if(accountAuthPending)await accountReady;
+}
+function acceptProfile(profile:AccountProfile){
+ accountProfile=profile;
+ profileCheckedAt=Date.now();
+ const uid=accountSession.user?.id;
+ if(uid&&usesFirebase&&!isTestAccount()&&!scoreCalculationPending(profile)){
+  void writeProfileCache(uid,{profile,checkedAt:profileCheckedAt});
+ }
+ return profile;
+}
+export function currentProfileSnapshot():ProfileSnapshot|null{
+ return accountProfile?{profile:accountProfile,checkedAt:profileCheckedAt}:null;
+}
+export async function ensureAccountProfile(){
+ await accountReady;
+ const account=selectedAccount(accountSession);
+ if(!sessionVerified||!account)return null;
+ if(refreshRequest)return accountProfile;
+ if(accountProfile&&!accountProfile.scoreError&&!accountProfile.comparisonUnavailable)return accountProfile;
+ const revision=sessionRevision,version=profileReadVersion;
+ const isCurrent=()=>revision===sessionRevision&&version===profileReadVersion;
+ return profileRequest??=api<AccountProfile>('/accounts/'+encodeURIComponent(account.id)).then(profile=>{
+  if(revision!==sessionRevision)return null;
+  if(!isCurrent())return accountProfile;
+  accountError='';
+  return acceptProfile(profile);
+ }).catch(error=>{
+  if(isCurrent())accountError=error instanceof Error?error.message:'니케 정보를 불러오지 못했어요.';
+  return null;
+ }).finally(()=>{if(isCurrent())profileRequest=undefined;});
+}
+function confirmedCommander(){
+ return sessionVerified?selectedAccount(accountSession)?.id??null:undefined;
+}
+export async function readCommanderCharacters(){
+ await accountReady;
+ const id=confirmedCommander(),uid=accountSession.user?.id,revision=sessionRevision;
+ if(!id||!uid)return [];
+ if(accountProfile?.account.id===id)return accountProfile.profile.characters;
+ if(!usesFirebase||isTestAccount())return (await ensureAccountProfile())?.profile.characters??[];
+ const {firebaseCommanderCharacters}=await import('./firebase-client');
+ return revision===sessionRevision?firebaseCommanderCharacters(id):[];
+}
+export function openAccountProfile(){
+ const latest=ensureAccountProfile().then(profile=>profile?{profile,checkedAt:profileCheckedAt}:null);
+ const selection=accountReady.then(()=>{
+  const commander=confirmedCommander(),uid=accountSession.user?.id;
+  if(commander!==undefined&&uid&&usesFirebase&&!isTestAccount())void pruneProfileCache(uid,commander);
+  return commander;
+ });
+ const saved=(async()=>{
+  if(!usesFirebase)return null;
+  await waitForAccountAuth();
+  const uid=accountSession.user?.id,revision=sessionRevision;
+  if(!uid||isTestAccount())return null;
+  const snapshot=await readProfileCache(uid);
+  if(!snapshot||revision!==sessionRevision||accountSession.user?.id!==uid)return null;
+  const commander=confirmedCommander();
+  if(commander!==undefined&&commander!==snapshot.profile.account.id)return null;
+  return snapshot;
+ })();
+ const initial=Promise.race([
+  saved.then(snapshot=>snapshot?{snapshot,cached:true}:latest.then(snapshot=>({snapshot,cached:false}))),
+  latest.then(async snapshot=>{
+   if(snapshot&&!snapshot.profile.scoreError&&!snapshot.profile.comparisonUnavailable)return {snapshot,cached:false};
+   const fallback=await saved;
+   return fallback&&(!snapshot||snapshot.profile.account.id===fallback.profile.account.id)
+    ?{snapshot:fallback,cached:true}:{snapshot,cached:false};
+  }),
+ ]);
+ return {initial,latest,selection};
+}
 export async function selectAccount(id:string){await api('/accounts/'+encodeURIComponent(id)+'/select',{});await loadSession();}
-export async function refreshAccount(){if(!accountProfile)return;const profile=await api<AccountProfile>('/accounts/'+encodeURIComponent(accountProfile.account.id)+'/refresh',{});accountProfile=profile;await loadSession();}
-export async function readSavedAccount(){if(accountProfile){accountProfile=await api<AccountProfile>('/accounts/'+encodeURIComponent(accountProfile.account.id));changed();}}
-export async function deleteAccount(){++sessionRevision;await api('/account/delete',{confirmation:'탈퇴'});accountSession={...accountSession,user:null,accounts:[]};accountProfile=null;accountError='';changed();}
-export async function logout(){++sessionRevision;await api('/logout',{});accountSession={...accountSession,user:null,accounts:[]};accountProfile=null;accountError='';changed();}
+export async function readSavedAccount(){
+ const account=selectedAccount(accountSession);
+ if(!sessionVerified||!account||refreshRequest)return;
+ const revision=sessionRevision,version=profileReadVersion;
+ const path='/accounts/'+encodeURIComponent(account.id);
+ const profile=await api<AccountProfile>(path);
+ if(revision!==sessionRevision||version!==profileReadVersion)return;
+ acceptProfile(profile);
+ accountSession={...accountSession,accounts:accountSession.accounts.map(item=>item.id===account.id?profile.account:item)};
+ accountError='';
+ changed();
+}
+export async function refreshAccount(){
+ if(refreshRequest)return refreshRequest;
+ const account=selectedAccount(accountSession);
+ if(!sessionVerified||!account)return;
+ const revision=sessionRevision;
+ ++profileReadVersion;
+ profileRequest=undefined;
+ const notify=(snapshot:ProfileSnapshot|null=null)=>document.dispatchEvent(new CustomEvent('mimir-account-profile-changed',{detail:snapshot}));
+ const apply=(profile:AccountProfile)=>{
+  if(revision!==sessionRevision)return;
+  acceptProfile(profile);
+  accountSession={...accountSession,accounts:accountSession.accounts.map(item=>item.id===account.id?profile.account:item)};
+  accountError='';
+  notify(currentProfileSnapshot());
+ };
+ const refresh=async()=>{
+  let latestGrowth:AccountProfile|undefined;
+  try{
+   const profile=usesFirebase&&!isTestAccount()
+    ?await (await import('./firebase-client')).refreshFirebaseProfile(account.id,growth=>{latestGrowth=growth;apply(growth);})
+    :await api<AccountProfile>('/accounts/'+encodeURIComponent(account.id)+'/refresh',{});
+   if(scoreCalculationPending(profile)){
+    // A concurrent sync can still own the current score snapshot.
+    profile.scoreError='스코어가 아직 계산 중이에요. 잠시 후 저장된 점수를 확인해 주세요.';
+   }else if(profile.scoreStatus==='failed'){
+    profile.scoreError='미미르 스코어를 계산하지 못했어요.';
+   }
+   apply(profile);
+  }catch(error){
+   if(latestGrowth)apply({...latestGrowth,scoreStatus:'error',scoreError:error instanceof Error?error.message:'스코어를 불러오지 못했어요.'});
+   throw error;
+  }finally{
+   if(revision===sessionRevision){refreshRequest=undefined;notify();}
+  }
+ };
+ refreshRequest=refresh();
+ notify();
+ return refreshRequest;
+}
+function clearSession(){
+ ++sessionRevision;
+ sessionVerified=false;
+ profileRequest=undefined;
+ refreshRequest=undefined;
+ accountReady=Promise.resolve();
+ accountSession={configured:usesFirebase||accountSession.configured,user:null,accounts:[]};
+ accountProfile=null;
+ accountError='';
+ changed();
+}
+async function endSession(path:string,body:unknown){
+ const uid=accountSession.user?.id;
+ await api(path,body);
+ clearSession();
+ if(uid)await clearProfileCache(uid);
+}
+export const deleteAccount=()=>endSession('/account/delete',{confirmation:'탈퇴'});
+export const logout=()=>endSession('/logout',{});
 const esc=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-export function showAccountDialog(){
+export async function showAccountDialog(){
+ if(accountAuthPending)await waitForAccountAuth();
  if(accountSession.user){location.hash='/account';return;}
  if(document.querySelector('dialog.account-dialog'))return;
  const dialog=document.createElement('dialog');dialog.className='account-dialog';dialog.setAttribute('aria-labelledby','account-dialog-title');

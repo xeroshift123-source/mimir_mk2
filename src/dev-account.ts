@@ -35,7 +35,7 @@ async function profile():Promise<AccountProfile>{
 export async function devApi(path:string,body?:unknown):Promise<unknown>{
  if(!import.meta.env.DEV)throw Error('개발 환경에서만 사용할 수 있어요.');
  const data=await profile();
- if(path==='/session')return {configured:false,user:{id:'local-dummy',nickname:'테스트 지휘관',email:'test.commander@example.com',picture:'/assets/mimir-logo.png'},accounts:[data.account]} satisfies AccountSession;
+ if(path==='/session')return {configured:false,user:{id:'local-dummy',nickname:'테스트 지휘관',email:'test.commander@example.com',picture:'/assets/mimir-logo.png'},accounts:[data.account],commanderSummary:data.profile} satisfies AccountSession;
  if(path==='/account/delete'){if((body as {confirmation?:string})?.confirmation!=='탈퇴')throw Error('탈퇴를 입력해 주세요.');sessionStorage.removeItem('mimir-dev-account');sessionStorage.removeItem('mimir-dev-badges');sessionStorage.removeItem('mimir-dev-worldcup-badges');snapshot=undefined;return {ok:true};}
  if(path==='/logout'){sessionStorage.removeItem('mimir-dev-account');return {ok:true};}
  if(path==='/accounts/'+id||path==='/accounts/'+id+'/refresh')return data;

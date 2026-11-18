@@ -1,0 +1,24 @@
+.builder-growth-tooltip {
+ position: fixed;
+ z-index: 90;
+ width: min(280px, calc(100vw - 16px));
+ padding: 12px;
+ border-radius: 10px;
+ background: var(--surface-raised);
+ color: var(--text);
+ box-shadow: 0 8px 24px #0004;
+ font-size: 12px;
+ line-height: 1.5;
+ pointer-events: none;
+}
+.builder-growth-name { font-size: 15px; }
+.builder-growth-label { display: block; margin-top: 8px; }
+.builder-growth-tooltip dl { margin: 4px 0 0; }
+.builder-growth-tooltip dl > div { display: flex; justify-content: space-between; gap: 8px; }
+.builder-growth-tooltip dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.builder-growth-equipment { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 14px; }
+.builder-growth-overload { display: grid; gap: 3px; }
+.builder-growth-overload > div { padding: 2px 7px; border-radius: 4px; background: #eaeaea; color: #333; }
+.builder-growth-overload dd { color: #7f8c8d; }
+.builder-growth-overload > .overload-max { background: #232323; color: #fff; }
+.builder-growth-overload > :is(.overload-max, .overload-high) dd { color: #049ee7; }

@@ -5,6 +5,7 @@ type Stats={sampleCount:number;minimumSample:number;isSufficient:boolean;generat
 const esc=(value:string)=>value.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
 const cache=new Map<string,{at:number;request:Promise<Stats>}>();
 document.addEventListener('mimir-account-changed',()=>cache.clear());
+document.addEventListener('mimir-account-profile-changed',event=>{if((event as CustomEvent).detail)cache.clear();});
 export async function mountSavedStatistics(root:HTMLElement,openId:string,nameCode:number){
  const path='/statistics/'+encodeURIComponent(openId)+'/'+nameCode;
  let entry=cache.get(path);if(!entry||Date.now()-entry.at>60000){const request=api<Stats>(path);entry={at:Date.now(),request};cache.set(path,entry);void request.catch(()=>cache.delete(path));}

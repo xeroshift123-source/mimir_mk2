@@ -3645,7 +3645,7 @@
     "squadNum": 0,
     "rank": "SSR",
     "type": "SUP",
-    "isTemporary": true,
+    "isTemporary": false,
     "blablaNameCode": 5184
   },
   {
@@ -3666,7 +3666,7 @@
     "squadNum": 0,
     "rank": "SSR",
     "type": "ATK",
-    "isTemporary": true,
+    "isTemporary": false,
     "blablaNameCode": 5185
   },
   {
@@ -3688,7 +3688,7 @@
     "squadNum": 0,
     "rank": "SSR",
     "type": "ATK",
-    "isTemporary": true,
+    "isTemporary": false,
     "blablaNameCode": 5186
   },
   {
@@ -3706,7 +3706,29 @@
     "squadNum": 0,
     "rank": "SSR",
     "type": "SUP",
-    "isTemporary": true,
+    "isTemporary": false,
     "blablaNameCode": 5187
+  },
+  {
+    "id": "sky",
+    "name": "스카이",
+    "imageUrl": "assets/nikke/sky.png",
+    "burst": "1",
+    "element": "Electric",
+    "weaponType": "SR",
+    "company": "Elysion",
+    "ability": [
+        "시공감"
+        , "시전자 기준 공격력"
+        , "시공증"
+        , "관통데미지"
+        , "관통뎀"
+    ],
+    "coolTime": 40,
+    "squadNum": 0,
+    "rank": "SSR",
+    "type": "SUP",
+    "isTemporary": true,
+    "blablaNameCode": 5188
   }
 ]
