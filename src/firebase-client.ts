@@ -95,7 +95,15 @@ async function profile(id:string,refresh=false,onGrowth?:(profile:AccountProfile
  }
  const comparisonRequest=callFunction('getMimirScoreComparisons',{openId:id}).catch(error=>{console.warn('평균 스코어 조회:',error.message);return null;});
  let result:LegacyRecord;try{result=await callFunction('getNikkeScores',{openId:id});}catch(error){result={data:{status:'error',results:{}},scoreError:(error as Error).message};}
- const comparisons=await comparisonRequest;if(comparisons)result.data.comparisons=comparisons.data;
+ const comparisons=await comparisonRequest;if(comparisons){
+  result.data.comparisons=comparisons.data;
+  if(comparisons.syncId&&comparisons.syncId===result.data.syncId){
+   for(const element of result.data.elements??[]){
+    const ranked=comparisons.elementRanks?.[element.key];
+    if(ranked&&ranked.sampleCount===element.sampleCount&&ranked.topPercent===element.topPercent)element.rank=ranked.rank;
+   }
+  }
+ }
  if(auth.currentUser?.uid!==user.uid)throw Error('로그인 계정이 변경되었어요.');
  if(refresh&&commander.scoreSyncId&&result.data?.syncId&&commander.scoreSyncId!==result.data.syncId){
   const snapshot=await getDoc(doc(db,'commanders',id)),latest=snapshot.data();

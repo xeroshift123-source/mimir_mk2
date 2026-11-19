@@ -1,14 +1,18 @@
 'use strict';
 const {saveDisplay,publicShowcase}=require('./badge-display');
 const {POLICY_HASH,TARGETS}=require('./nikkeScoreAdapter');
+const {ELEMENTS,elementDamageTotals}=require('./nikkeScoreElements');
+const DAY_MS=86400000;
 function comparison(target,distribution,item,now=Date.now()){
- const valid=distribution?.policyHash===POLICY_HASH&&Number.isFinite(distribution.generatedAtMs)&&distribution.generatedAtMs<=now&&now-distribution.generatedAtMs<86400000;
+ const valid=distribution?.policyHash===POLICY_HASH&&Number.isFinite(distribution.generatedAtMs)&&distribution.generatedAtMs<=now&&now-distribution.generatedAtMs<DAY_MS;
  const values=valid&&Array.isArray(distribution.damages)?distribution.damages.filter(n=>Number.isSafeInteger(n)&&n>=0):[];
- const own=item?.status==='complete'&&item.policyHash===POLICY_HASH&&item.calcVersion===distribution?.calcVersion&&Number.isFinite(item.damage)&&item.damage>=0;
+ const own=item?.status==='complete'&&item.policyHash===POLICY_HASH&&Number.isSafeInteger(item.damage)&&item.damage>=0;
  const sufficient=values.length>=20;
+ const greater=own&&sufficient?values.filter(n=>n>item.damage).length:null;
  return {nameCode:target.nameCode,weakness:target.weakness,score:own?item.score:null,sampleCount:values.length,
   average:sufficient?values.reduce((mean,n,i)=>mean+(n-mean)/(i+1),0)*5/1e8:null,
-  topPercent:own&&sufficient?(values.filter(n=>n>item.damage).length+values.filter(n=>n===item.damage).length*.5)/values.length*100:null};
+  rank:greater===null?null:greater+1,
+  topPercent:greater===null?null:(greater+values.filter(n=>n===item.damage).length*.5)/values.length*100};
 }
 function createHandler({db,verifyIdToken}){return async(req,res)=>{
  res.set('Access-Control-Allow-Origin',req.headers.origin||'*');res.set('Vary','Origin');res.set('Access-Control-Allow-Headers','Content-Type, Authorization');res.set('Access-Control-Allow-Methods','POST, OPTIONS');res.set('Cache-Control','no-store');
@@ -22,9 +26,28 @@ function createHandler({db,verifyIdToken}){return async(req,res)=>{
  try{
   const [binding,user]=await db.getAll(db.collection('open_id_bindings').doc(openId),db.collection('users').doc(uid));
   const bound=binding.data()?.uid,u=user.data()||{};if(bound?bound!==uid:!(u.openId===openId||u.linkedOpenIds?.includes(openId)))return res.status(403).json({success:false,error:'연동된 지휘관만 조회할 수 있어요.'});
-  const targets=[...TARGETS.entries()];const [saved,...distributions]=await db.getAll(db.collection('nikke_score_results').doc(openId),...targets.map(([key])=>db.collection('nikke_score_distributions').doc(key)));
-  const results=saved.data()?.results||{};
-  return res.status(200).json({success:true,data:Object.fromEntries(targets.map(([key,target],i)=>[key,comparison(target,distributions[i].data(),results[key])]))});
+  const targets=[...TARGETS.entries()],elementKeys=Object.keys(ELEMENTS);
+  const distributions=db.collection('nikke_score_distributions');
+  const [saved,commander,...samples]=await db.getAll(
+   db.collection('nikke_score_results').doc(openId),db.collection('commanders').doc(openId),
+   ...targets.map(([key])=>distributions.doc(key)),
+   ...elementKeys.map(key=>distributions.doc('element-'+key)));
+  const snapshot=saved.data(),profile=commander.data(),now=Date.now();
+  const updatedAt=profile?.lastUpdatedAt;
+  const updatedAtMs=updatedAt?.toMillis?.()??Number(updatedAt);
+  const eligible=profile?.scoreSyncId&&profile.scoreSyncId===snapshot?.syncId
+   &&Number.isFinite(updatedAtMs)&&updatedAtMs>=now-30*DAY_MS;
+  const results=eligible?snapshot.results??{}:{};
+  const totals=elementDamageTotals(snapshot,profile);
+  const elementRanks=Object.fromEntries(elementKeys.map((key,i)=>{
+   const distribution=samples[targets.length+i].data();
+   const {rank,sampleCount,topPercent}=comparison({},distribution,{
+    status:'complete',policyHash:POLICY_HASH,damage:totals[key]
+   },now);
+   return [key,{rank,sampleCount,topPercent}];
+  }));
+  return res.status(200).json({success:true,syncId:snapshot?.syncId??null,elementRanks,
+   data:Object.fromEntries(targets.map(([key,target],i)=>[key,comparison(target,samples[i].data(),results[key],now)]))});
  }catch(error){console.error('Score comparison read failed:',error.code||'internal');return res.status(500).json({success:false,error:'평균 스코어를 불러오지 못했어요.'});}
 };}
 module.exports={comparison,createHandler};

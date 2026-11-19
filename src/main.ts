@@ -9,7 +9,7 @@ import './legal.css';
 import './theme.css';
 import {mountThemeToggle} from './theme';
 import './style.css';
-import {accountReady,accountProfile,accountSession,ensureAccountProfile,showAccountDialog,isTestAccount,mountAccountPage,usesFirebase} from './account-client';
+import {accountReady,accountProfile,accountSession,ensureAccountProfile,showAccountDialog,isTestAccount,mountAccountPage,usesFirebase,isAccountRefreshing,refreshAccount} from './account-client';
 import './account.css';
 import './palette.css';
 import {mountHomeRaids} from './home-raids';
@@ -54,13 +54,63 @@ function updateAccountHeader(){
  if(accountSession.user){const ring=document.createElement('span');ring.className='header-avatar';ring.setAttribute('aria-hidden','true');const initial=document.createElement('span');initial.textContent=Array.from(accountSession.user.nickname.trim())[0]?.toUpperCase()??'M';ring.append(initial);button.append(ring);}
  else button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v16h-6M3 12h12m-5-5 5 5-5 5"/></svg><span>로그인</span>';
  button.title=accountSession.user?accountSession.user.nickname+' · 내 정보':'Google 로그인';button.setAttribute('aria-label',accountSession.user?accountSession.user.nickname+' 내 정보':'로그인');document.querySelector('.prototype')!.textContent=accountSession.user?'미미르 · 로그인됨':'미미르 · 로그인 전';}
-function updateHomeAccount(){const root=document.querySelector<HTMLElement>('#home-account-summary');if(!root)return;const p=accountProfile?.profile??accountSession.commanderSummary;root.hidden=!p;if(!p){root.replaceChildren();return;}root.replaceChildren();const heading=document.createElement('strong');heading.textContent=p.nickname+' · '+p.server+' 서버';root.append(heading);const list=document.createElement('dl');for(const [label,value] of [['지휘관 레벨',p.commanderLevel],['보유 니케',p.ownedNikkesCount],['싱크로 레벨',p.synchroLevel]]){const item=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=String(label);dd.textContent=typeof value==='number'?value.toLocaleString('ko-KR')+(label==='보유 니케'?'명':''):'—';item.append(dt,dd);list.append(item);}root.append(list);}
+let homeRefreshError = '';
+function updateHomeAccount(){
+ const root=document.querySelector<HTMLElement>('#home-account-summary');
+ if(!root)return;
+ const profile=accountProfile?.profile??accountSession.commanderSummary;
+ root.hidden=!profile;
+ root.replaceChildren();
+ if(!profile)return;
+
+ const header=document.createElement('div');
+ header.className='home-account-heading';
+ const heading=document.createElement('strong');
+ heading.textContent=profile.nickname+' · '+profile.server+' 서버';
+ header.append(heading);
+ if(accountSession.accounts.length){
+  const refreshing=isAccountRefreshing();
+  const button=document.createElement('button');
+  button.type='button';
+  button.className='home-account-refresh';
+  button.innerHTML=icon('sync');
+  button.disabled=refreshing;
+  button.setAttribute('aria-busy',String(refreshing));
+  button.setAttribute('aria-label',refreshing?'정보 갱신 중':'지휘관 정보 갱신');
+  button.addEventListener('click',()=>{
+   homeRefreshError='';
+   void refreshAccount().catch(error=>{
+    homeRefreshError=error instanceof Error?error.message:'지휘관 정보를 갱신하지 못했어요.';
+    updateHomeAccount();
+   });
+  });
+  header.append(button);
+ }
+ root.append(header);
+
+ const list=document.createElement('dl');
+ for(const [label,value] of [['지휘관 레벨',profile.commanderLevel],['보유 니케',profile.ownedNikkesCount],['싱크로 레벨',profile.synchroLevel]]){
+  const item=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+  dt.textContent=String(label);
+  dd.textContent=typeof value==='number'?value.toLocaleString('ko-KR')+(label==='보유 니케'?'명':''):'—';
+  item.append(dt,dd);
+  list.append(item);
+ }
+ root.append(list);
+ if(homeRefreshError){
+  const error=document.createElement('p');
+  error.className='home-account-refresh-error';
+  error.setAttribute('role','alert');
+  error.textContent=homeRefreshError;
+  root.append(error);
+ }
+}
 function updateAccount(){
  updateAccountHeader();
  updateHomeAccount();
  if(!usesFirebase&&accountSession.accounts.length&&!accountProfile)void ensureAccountProfile().then(updateHomeAccount);
 }
-document.addEventListener('mimir-account-auth-changed',updateAccountHeader);
+document.addEventListener('mimir-account-auth-changed',()=>{homeRefreshError='';updateAccountHeader();});
 document.addEventListener('mimir-account-profile-changed',updateHomeAccount);
 void accountReady.then(updateAccount);
 document.addEventListener('mimir-account-changed',()=>{updateAccount();if(location.hash==='#/my-nikke'||location.hash==='#/account'||location.hash==='#/entertainment')void route();});

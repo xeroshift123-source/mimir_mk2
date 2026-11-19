@@ -1,5 +1,6 @@
 import {loadingMarkup} from './loading';
 import {mountGrowthTooltip} from './builder-growth-tooltip';
+import {accountSession,readCommanderCharacters} from './account-client';
 import {rememberBuilderRaid} from './builder-navigation';
 import {catalogPanel,mountCatalogControls} from './nikke-catalog';
 import {publishDeck} from './deck-publish';
@@ -25,6 +26,8 @@ export async function mountBuilder(root: HTMLElement, mode: Mode, isCurrent:()=>
  let selectedNikke:string|null=null;
  let deck=emptyDeck(mode),target:[number,number]=[0,0],moving:[number,number]|null=null;
  let query='',hidePlaced=false,sort='name',filters:Record<string,Set<string>>={burst:new Set(),element:new Set(),weaponType:new Set(),company:new Set(),rank:new Set()};
+ const combatByCode=new Map<number,number|null>();
+ let sortEdited=false,catalogSortPending=false;
  const storageKey=raid?`mimir-mk2-deck-${mode}-raid-${raid.id}`:`mimir-mk2-deck-${mode}`;
  let undo: string[]=[],redo: string[]=[],saveFailed=false,storageWarning='';
  try { const stored=localStorage.getItem(storageKey)??(!localStorage.getItem(`mimir-mk2-deck-${mode}-raid-context`)?localStorage.getItem(`mimir-mk2-deck-${mode}`):null); if(stored){const parsed=JSON.parse(stored); const restored=decodeDeck(encodeDeck(parsed,catalog),catalog); deck={...restored,names:deck.names.map((x,i)=>typeof parsed.names?.[i]==='string'?parsed.names[i].slice(0,40):x),weakness:Object.keys(elements).includes(parsed.weakness)?parsed.weakness:'Water',hasCandidate:parsed.hasCandidate===true||parsed.candidates?.length>0,candidates:Array.isArray(parsed.candidates)?[...new Set<string>(parsed.candidates.filter((id:unknown)=>typeof id==='string'&&byId.has(id)&&!restored.squads.flat().includes(id)))].slice(0,10):[]};} }catch{storageWarning='저장된 편성을 복원하지 못했어요. 새 편성으로 시작합니다.';}
@@ -101,7 +104,16 @@ export async function mountBuilder(root: HTMLElement, mode: Mode, isCurrent:()=>
  function renderCatalog(){
   closeGrowthTooltip();
   const used=new Set([...deck.squads.flat().filter(Boolean),...deck.candidates]);
-  const list=catalog.filter(n=>matchesNikke(n,query,filters)&&(!hidePlaced||!used.has(n.id))).sort((a,b)=>sort==='name'?a.name.localeCompare(b.name,'ko'):Number(a[sort as 'coolTime'|'burst'])-Number(b[sort as 'coolTime'|'burst'])||a.name.localeCompare(b.name,'ko'));
+  const rankOrder=['SSR','SR','R'];
+  const compare=(a:Nikke,b:Nikke)=>{
+   if(sort==='name')return a.name.localeCompare(b.name,'ko');
+   if(sort!=='combat')return Number(a[sort as 'coolTime'|'burst'])-Number(b[sort as 'coolTime'|'burst'])||a.name.localeCompare(b.name,'ko');
+   const aPower=combatByCode.get(a.blablaNameCode??-1),bPower=combatByCode.get(b.blablaNameCode??-1);
+   return Number(bPower!==undefined)-Number(aPower!==undefined)
+    ||(bPower??-1)-(aPower??-1)
+    ||rankOrder.indexOf(a.rank)-rankOrder.indexOf(b.rank)||a.name.localeCompare(b.name,'ko');
+  };
+  const list=catalog.filter(n=>matchesNikke(n,query,filters)&&(!hidePlaced||!used.has(n.id))).sort(compare);
   root.querySelector('#catalog-count')!.textContent=`${list.length}명 표시`;
   root.querySelector('#nikke-grid')!.innerHTML=list.length?list.map(n=>`<article class="nikke-tile ${used.has(n.id)?'placed':''} ${selectedNikke===n.id?'selected-nikke':''}" data-growth-nikke="${esc(n.id)}"><button class="nikke-add" draggable="false" data-add="${esc(n.id)}" aria-pressed="${selectedNikke===n.id}" ${used.has(n.id)?'disabled':''} aria-label="${esc(n.name)} 선택"><div class="nikke-portrait">${img(n)}${badges(n)}<span class="original-name">${esc(n.name)}</span>${used.has(n.id)?`<span class="placed-label"><span aria-hidden="true">▣</span>${deck.candidates.includes(n.id)?'후보 덱':esc(deck.names[deck.squads.findIndex(r=>r.includes(n.id))])}</span>`:''}${n.isTemporary?'<span class="temporary-label">임시</span>':''}</div><strong>${esc(n.name)}</strong><span class="nikke-meta">${n.weaponType} <span>·</span> ${n.coolTime}초</span></button></article>`).join(''):'<div class="no-nikkes">검색 조건에 맞는 니케가 없어요.<button data-action="clear-filters">검색과 필터 초기화</button></div>';
   root.querySelectorAll<HTMLButtonElement>('[data-filter]').forEach(b=>{const on=filters[b.dataset.filter!].has(b.dataset.value!);b.classList.toggle('selected',on);b.setAttribute('aria-pressed',String(on));});
@@ -113,7 +125,7 @@ export async function mountBuilder(root: HTMLElement, mode: Mode, isCurrent:()=>
   if(el.dataset.name!==undefined){update(()=>{deck.names[Number(el.dataset.name)]=el.value.trim()||`스쿼드 ${Number(el.dataset.name)+1}`;});}
   if(el.dataset.element!==undefined)update(()=>{deck.elements[Number(el.dataset.element)]=el.value;});
   if(el.id==='weakness')update(()=>{deck.weakness=el.value;});
-  if(el.id==='hide-placed'){hidePlaced=el.checked;renderCatalog();}if(el.id==='nikke-sort'){sort=el.value;renderCatalog();}
+  if(el.id==='hide-placed'){hidePlaced=el.checked;renderCatalog();}if(el.id==='nikke-sort'){sortEdited=true;sort=el.value;renderCatalog();}
  });
  let suppressClick=false;
  root.addEventListener('click',async e=>{if(suppressClick){e.preventDefault();suppressClick=false;return;}const b=(e.target as HTMLElement).closest<HTMLElement>('button');if(!b||!root.contains(b))return;
@@ -170,7 +182,11 @@ export async function mountBuilder(root: HTMLElement, mode: Mode, isCurrent:()=>
 
  root.addEventListener('submit',e=>{if((e.target as HTMLElement).id!=='import-form')return;e.preventDefault();try{const incoming=decodeDeck(root.querySelector<HTMLTextAreaElement>('#import-code')!.value,catalog);if(incoming.type!==mode)throw Error(`${incoming.type==='solo'?'솔로':'유니온'} 레이드 코드예요. 상단에서 레이드 유형을 변경해 주세요.`);moving=null;update(()=>{deck=incoming;target=[0,0];});const select=root.querySelector<HTMLSelectElement>('#weakness');if(select)select.value=deck.weakness;dialog.close();toast('덱 코드를 가져왔어요.');}catch(err){root.querySelector('#import-status')!.textContent=(err as Error).message;}});
  let pointerDrag:{id:string;from?:[number,number];x:number;y:number;pointer:number;button:HTMLElement;active:boolean;ghost?:HTMLElement}|null=null;
- const clearPointer=()=>{pointerDrag?.ghost?.remove();pointerDrag=null;root.querySelectorAll('.drop-ready,.drag-origin').forEach(el=>el.classList.remove('drop-ready','drag-origin'));};
+ const clearPointer=()=>{
+  pointerDrag?.ghost?.remove();pointerDrag=null;
+  root.querySelectorAll('.drop-ready,.drag-origin').forEach(el=>el.classList.remove('drop-ready','drag-origin'));
+  if(catalogSortPending){catalogSortPending=false;renderCatalog();}
+ };
  root.addEventListener('pointerdown',e=>{
   if(e.button!==0||e.pointerType==='touch')return;
   const button=(e.target as HTMLElement).closest<HTMLButtonElement>('[data-add],[data-slot]');
@@ -198,6 +214,41 @@ export async function mountBuilder(root: HTMLElement, mode: Mode, isCurrent:()=>
  root.addEventListener('dragstart',e=>{if((e.target as HTMLElement).closest('[data-slot],[data-add]'))e.preventDefault();});
  root.addEventListener('keydown',e=>{if(e.key==='Escape'&&!sheet.open&&selectedNikke){selectedNikke=null;renderWorkspace();renderCatalog();toast('니케 선택을 해제했어요.');}});
  persist();renderWorkspace();renderCatalog();
+ const sortSelect=root.querySelector<HTMLSelectElement>('#nikke-sort')!;
+ const powerOption=new Option('전투력순','combat');
+ let powerRequest=0;
+ async function syncCombatSort(){
+  const request=++powerRequest;
+  const characters=await readCommanderCharacters().catch(()=>[]);
+  if(request!==powerRequest||!isCurrent())return;
+  const signedIn=!!accountSession.user;
+  const previousSort=sort;
+  if(signedIn){
+   if(!powerOption.isConnected)sortSelect.prepend(powerOption);
+   if(!sortEdited)sort='combat';
+  }else{
+   powerOption.remove();
+   if(sort==='combat')sort='name';
+  }
+  combatByCode.clear();
+  for(const {name_code,combat} of characters){
+   combatByCode.set(name_code,Number.isFinite(combat)&&combat>=0?combat:null);
+  }
+  sortSelect.value=sort;
+  if(sort!=='combat'&&sort===previousSort)return;
+  if(pointerDrag)catalogSortPending=true;
+  else renderCatalog();
+ }
+ const accountListeners=new AbortController();
+ document.addEventListener('mimir-account-changed',syncCombatSort,{signal:accountListeners.signal});
+ document.addEventListener('mimir-account-profile-changed',event=>{
+  if((event as CustomEvent).detail)void syncCombatSort();
+ },{signal:accountListeners.signal});
+ const accountObserver=new MutationObserver(()=>{
+  if(!root.isConnected){accountListeners.abort();accountObserver.disconnect();}
+ });
+ accountObserver.observe(root.parentNode??document.body,{childList:true});
+ void syncCombatSort();
 }
 
 

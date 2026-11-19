@@ -90,3 +90,44 @@
 .hero-actions{display:grid;grid-template-columns:repeat(2,minmax(0,196px));row-gap:12px}
 .hero-actions>.primary,.hero-actions>.text-button{width:100%;height:100%;text-align:center}
 .hero-actions>a.text-button>span{font-size:14px;flex-shrink:0}
+
+
+@media(min-width:681px){
+ .hero:has(.home-raid) > .hero-copy{align-self:end}
+ .hero > .home-raid{align-self:end}
+}
+
+.hero-actions > :is(button,a){white-space:nowrap}
+@media(max-width:680px){
+ :root .hero-actions > :is(.primary,.text-button){padding-inline:6px;gap:6px}
+}
+@media(max-width:350px){
+ .hero-actions{grid-template-columns:minmax(0,1fr)}
+}
+
+.home-account-heading{display:flex;align-items:center;gap:10px}
+.home-account-heading strong{font-size:15px}
+.home-account-refresh{
+ display:grid;
+ place-items:center;
+ box-sizing:border-box;
+ flex:none;
+ width:32px;
+ height:32px;
+ padding:0;
+ border:0;
+ border-radius:50%;
+ background:var(--accent);
+ color:#fff;
+ cursor:pointer;
+}
+.home-account-refresh svg{width:16px;height:16px}
+.home-account-refresh[aria-busy="true"]{
+ background:color-mix(in srgb,var(--accent) 78%,var(--surface));
+ cursor:wait;
+}
+@media(prefers-reduced-motion:no-preference){
+ .home-account-refresh[aria-busy="true"] svg{animation:home-account-refresh-spin 1s linear infinite}
+}
+@keyframes home-account-refresh-spin{to{transform:rotate(1turn)}}
+.hero .home-account-refresh-error{margin:12px 0 0;font-size:12px}

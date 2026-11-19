@@ -22,10 +22,10 @@ export function savedProfile(account:LinkedAccount,data:LegacyRecord,stored:Lega
  }
  const profile={...data,characters:Array.isArray(data.characters)?data.characters:[],recycleRoom:Array.isArray(data.recycleRoom)?data.recycleRoom:[],recycleRoomComplete:data.recycleRoomComplete===true,stateEffects:Array.isArray(data.stateEffects)?data.stateEffects:[]} as RawProfile;
  const elementScores:NonNullable<AccountProfile['elementScores']>={};
- for(const item of stored.elements??[]){if(typeof item.score==='number'&&Number.isFinite(item.score))elementScores[String(item.key)]={score:item.score,sampleCount:item.sampleCount??0,average:item.average??null,topPercent:item.topPercent??null};}
+ for(const item of stored.elements??[]){if(typeof item.score==='number'&&Number.isFinite(item.score))elementScores[String(item.key)]={score:item.score,sampleCount:item.sampleCount??0,average:item.average??null,topPercent:item.topPercent??null,rank:item.rank??null};}
  const nikkeComparisons:NonNullable<AccountProfile['nikkeComparisons']>={};
  for(const [key,item] of Object.entries(scores)){if(item.status==='complete'&&typeof item.nameCode==='number'&&item.weakness)nikkeComparisons[key]={nameCode:item.nameCode,weakness:item.weakness,score:item.score??null,average:item.average??null,topPercent:item.topPercent??null,sampleCount:item.sampleCount??0};}
- for(const [key,item] of Object.entries(stored.comparisons??{}) as [string,LegacyRecord][]){if(typeof item.nameCode==='number'&&typeof item.weakness==='string')nikkeComparisons[key]={nameCode:item.nameCode,weakness:item.weakness,score:item.score??null,average:item.average??null,topPercent:item.topPercent??null,sampleCount:item.sampleCount??0};}
+ for(const [key,item] of Object.entries(stored.comparisons??{}) as [string,LegacyRecord][]){if(typeof item.nameCode==='number'&&typeof item.weakness==='string')nikkeComparisons[key]={nameCode:item.nameCode,weakness:item.weakness,score:item.score??null,average:item.average??null,topPercent:item.topPercent??null,rank:item.rank??null,sampleCount:item.sampleCount??0};}
  return {account,profile,scores,elementScores,nikkeComparisons,scoreStatus:stored.status??'not_saved'};
 }
 export function savedDeck(id:string,data:LegacyRecord):SharedDeckPost{
