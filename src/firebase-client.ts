@@ -166,6 +166,14 @@ export async function firebaseApi(path:string,body?:any):Promise<any>{
   const url=new URL(body?.url??'');if(url.protocol!=='https:'||!['www.blablalink.com','blablalink.com'].includes(url.hostname)||url.pathname!=='/user'||url.username||url.password||url.port||!url.searchParams.get('openid'))throw Error('BLABLALINK의 HTTPS 프로필 주소를 입력해 주세요.');
   await callFunction('scrapeNikkeProfile',{url:url.href});commanders.clear();profiles.clear();return await session();
  }
+ const unlink=path.match(/^\/accounts\/([^/]+)\/unlink$/);
+ if(unlink){
+  const openId=decodeURIComponent(unlink[1]);
+  await callFunction('unlinkBlablaAccount',{openId});
+  commanders.delete(openId);
+  profiles.delete(openId);
+  return {};
+ }
  const account=path.match(/^\/accounts\/([^/]+)(?:\/(select|refresh))?$/);
  if(account){const id=decodeURIComponent(account[1]);if(account[2]==='select'){const user=requireUser();await session();if(!linkedIds(userData).includes(id))throw Error('연동된 지휘관만 선택할 수 있어요.');await updateDoc(doc(db,'users',user.uid),{selectedOpenId:id,selectedOpenIdUpdatedAt:serverTimestamp()});return {};}
   return await profile(id,account[2]==='refresh');}

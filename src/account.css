@@ -20,10 +20,10 @@
 .account-withdraw{margin-top:34px;padding-top:20px;border-top:1px solid #8882}.account-withdraw summary{width:fit-content;cursor:pointer;font-size:13px;color:var(--ui-color-a2b193,#a2b193)}.account-withdraw details[open] summary{color:#e58478;margin-bottom:16px}.account-withdraw p{max-width:650px;font-size:12px}.account-withdraw label{font-size:12px;margin:16px 0 8px}.account-withdraw-controls{display:flex;align-items:center;gap:10px;max-width:450px}.account-withdraw-controls input{width:100%;min-width:0;padding:10px 12px;border:1px solid #8883;border-radius:8px;background:transparent;color:inherit;font-size:13px}.account-withdraw-controls button{flex:none;padding:10px 14px;background:#b94736;color:#fff;border-radius:8px;font-size:12px}.account-withdraw-controls button:hover:not(:disabled){background:#ca5141}.account-withdraw-controls button:disabled{opacity:.35;cursor:not-allowed}
 .linked-commanders{margin-top:24px;padding:22px;border:1px solid #8882;border-radius:18px;background:var(--ui-background-1a1e1b,#1a1e1b)}.linked-commanders-title{display:flex;align-items:center;gap:9px}.linked-commanders-title>svg{width:22px;height:22px;color:#ff922e}.linked-commanders-title h3{margin:0;font-size:15px;font-weight:800}.account-dialog .linked-commanders>p{font-size:12px;line-height:1.5;margin:7px 0 16px}
 :root .account-page-panel .linked-commanders .account-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:12px;margin:0}
-:root .account-dialog .account-list>.linked-commander-card{display:flex;align-items:center;justify-content:flex-start;gap:14px;width:100%;margin:0;padding:16px;border:1px solid #ff922e2e;border-radius:16px;background:#ff922e0b;color:inherit;text-align:left;min-height:94px}
-:root .account-dialog .account-list>.linked-commander-card.is-selected{border:1.6px solid #ff922eb8;background:#ff922e19;box-shadow:0 5px 16px #ff922e14}
-:root .account-dialog .account-list>.linked-commander-card:disabled{opacity:1;cursor:default}
-:root .account-dialog .account-list>.linked-commander-card:hover:not(:disabled){border-color:#ff922e80;background:#ff922e15}
+:root .account-dialog .linked-commander-row>.linked-commander-card{display:flex;align-items:center;justify-content:flex-start;gap:14px;width:100%;margin:0;padding:16px;border:1px solid #ff922e2e;border-radius:16px;background:#ff922e0b;color:inherit;text-align:left;min-height:94px}
+:root .account-dialog .linked-commander-row>.linked-commander-card.is-selected{border:1.6px solid #ff922eb8;background:#ff922e19;box-shadow:0 5px 16px #ff922e14}
+:root .account-dialog .linked-commander-row>.linked-commander-card:disabled{opacity:1;cursor:default}
+:root .account-dialog .linked-commander-row>.linked-commander-card:hover:not(:disabled){border-color:#ff922e80;background:#ff922e15}
 .linked-server-symbol{display:grid;place-items:center;width:48px;height:48px;flex:none;border-radius:50%;background:var(--ui-background-1a1e1b,#1a1e1b);border:1px solid #ff922e47;font-size:25px;box-shadow:0 3px 8px #0000000d}
 .linked-commander-info{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}.linked-commander-name{display:flex;align-items:center;gap:7px;max-width:100%}.linked-commander-name strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:17px;font-weight:800;line-height:1.4}.linked-commander-name>svg{width:20px;height:20px;flex:none;color:#ff922e}.linked-server-chip{padding:3px 8px;border-radius:20px;background:#ff922e1f;font-size:11px;font-weight:700;line-height:1.4;color:var(--ui-color-a2b193,#a2b193)}
 @media(max-width:600px){.linked-commanders{padding:18px}.linked-commander-name strong{font-size:16px}}
@@ -33,9 +33,9 @@
 
 /* Account surfaces use spacing and tone rather than outlined boxes. */
 :root .account-page-panel .linked-commanders{border:0;box-shadow:none}
-:root .account-dialog .account-list>.linked-commander-card{border:0;background:#ff922e08;box-shadow:none}
-:root .account-dialog .account-list>.linked-commander-card.is-selected{border:0;background:#ff922e16;box-shadow:none}
-:root .account-dialog .account-list>.linked-commander-card:hover:not(:disabled){border:0;background:#ff922e14}
+:root .account-dialog .linked-commander-row>.linked-commander-card{border:0;background:#ff922e08;box-shadow:none}
+:root .account-dialog .linked-commander-row>.linked-commander-card.is-selected{border:0;background:#ff922e16;box-shadow:none}
+:root .account-dialog .linked-commander-row>.linked-commander-card:hover:not(:disabled){border:0;background:#ff922e14}
 :root .account-dialog .linked-server-symbol{border:0;box-shadow:none;background:var(--ui-background-1a1e1b,#1a1e1b)}
 :root .account-add-link>summary{border:0;background:#ff922e0b;border-radius:10px}
 :root .account-add-link>summary:hover{background:#ff922e18}
@@ -52,3 +52,8 @@
 .account-google[aria-busy=true]:disabled{opacity:1;cursor:wait}
 @keyframes account-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.account-spinner{animation:none}}
+
+.linked-commander-row{position:relative;min-width:0}
+:root .account-dialog .linked-commander-row:has(.linked-commander-unlink)>.linked-commander-card{padding-inline-end:108px}
+.account-dialog .linked-commander-unlink{position:absolute;inset-inline-end:12px;top:50%;transform:translateY(-50%);padding:9px 10px;border-radius:8px;background:transparent;color:inherit;font-size:14px;font-weight:700;white-space:nowrap}
+.account-dialog .linked-commander-unlink:hover:not(:disabled){background:#ff922e19}
